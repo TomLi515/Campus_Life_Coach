@@ -1,0 +1,55 @@
+seed: 42
+device: auto
+
+logging:
+  project: campus-life-coach
+  run_name: watch-encoder-pretrain
+  log_interval_steps: 50
+  checkpoint_dir: /nfs/home/hcf3594/pretrain/artifacts/watch_encoder
+  save_top_k: 1
+
+optimizer:
+  name: AdamW
+  lr: 0.001
+  weight_decay: 0.01
+  betas: [0.9, 0.999]
+  eps: 1e-8
+
+scheduler:
+  name: cosine
+  warmup_epochs: 5
+
+training:
+  epochs: 80
+  batch_size: 128
+  num_workers: 4
+  grad_clip_norm: 1.0
+  class_weighting: balanced
+
+augmentation:
+  time_jitter_seconds: 0.2
+  add_noise_std: 0.02
+  random_rotation_degrees: 15
+  drop_channels_prob: 0.05
+
+model:
+  backbone: convnet_small
+  input_channels: 6
+  sequence_length: 150
+  embedding_dim: 256
+  dropout: 0.1
+
+heads:
+  num_classes: 6
+  include_other: true
+
+dataset:
+  path: /nfs/home/hcf3594/pretrain/data/processed/watch_windows.npz
+  metadata_path: /nfs/home/hcf3594/pretrain/data/processed/dataset_metadata.json
+  train_split: train
+  val_split: val
+  test_split: test
+
+metrics:
+  compute_per_class_f1: true
+  compute_confusion_matrix: true

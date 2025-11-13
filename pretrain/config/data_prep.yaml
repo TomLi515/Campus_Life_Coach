@@ -1,0 +1,65 @@
+# Unified data preparation configuration for phone and watch encoders
+seed: 42
+output_root: /Users/a86159/Desktop/pretrain/data/processed
+raw_root: /Users/a86159/Desktop/pretrain/data/raw
+
+signal_spec:
+  target_sampling_rate: 50
+  window_size_seconds: 3.0
+  window_step_seconds: 0.5
+  channels: [ax, ay, az, gx, gy, gz]
+  channel_order_comment: "Always [ax, ay, az, gx, gy, gz]."
+
+label_space:
+  primary_labels: [Walk, Run, Sit, Stand, Lie]
+  include_other_class: true
+
+uci_har:
+  enabled: true
+  url: "https://archive.ics.uci.edu/static/public/240/human+activity+recognition+using+smartphones.zip"
+  extract_dirname: "UCI HAR Dataset"
+  resample_strategy: "stretch_to_target"  # options: stretch_to_target | pad_repeat
+  train_subjects: auto  # use dataset default train split
+  val_split_ratio: 0.15
+  mapping:
+    Walk: [WALKING, WALKING_UPSTAIRS, WALKING_DOWNSTAIRS]
+    Run: []
+    Sit: [SITTING]
+    Stand: [STANDING]
+    Lie: [LAYING]
+
+motionsense:
+  enabled: true
+  url: "https://onedrive.live.com/download?cid=3C009EDA6397AA76&resid=3C009EDA6397AA76%21107&authkey=AD_d_6E"
+  extract_dirname: "MotionSense"
+  local_dir: "/Users/a86159/Desktop/pretrain/MotionSense"
+  train_subjects: [1,2,3,4,5,7,8,9,10,11,12,13,14,15,16,17]
+  val_subjects: [18,19,20]
+  test_subjects: [21,22,23,24]
+  mapping:
+    Walk: [walking, upstairs, downstairs]
+    Run: [jogging]
+    Sit: [sitting]
+    Stand: [standing]
+    Lie: []
+
+pamap2:
+  enabled: true
+  url: "https://archive.ics.uci.edu/static/public/231/pamap2+physical+activity+monitoring.zip"
+  extract_dirname: "PAMAP2_Dataset"
+  resample_method: "resample_poly"  # options: resample_poly | decimate
+  train_subjects: [101,102,103,104,106,107]
+  val_subjects: [105]
+  test_subjects: [108,109]
+  mapping:
+    Walk: [walking, ascending_stairs, descending_stairs, nordic_walking]
+    Run: [running]
+    Sit: [sitting]
+    Stand: [standing]
+    Lie: [lying]
+    Other: [cycling, ironing, rope_jumping, vacuum_cleaning, watching_TV, computer_work, car_driving]
+
+artifacts:
+  phone_dataset_filename: phone_windows.npz
+  watch_dataset_filename: watch_windows.npz
+  metadata_filename: dataset_metadata.json
