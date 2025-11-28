@@ -1,0 +1,14 @@
+{
+  "phone_only_f1": 0.2375995230001286,
+  "watch_only_f1": 0.8493483715720455,
+  "fusion_f1": 0.9816409105515953,
+  "train_subjects": [
+    "user2"
+  ],
+  "val_subjects": [
+    "user4"
+  ],
+  "test_subjects": [
+    "user1"
+  ]
+}
