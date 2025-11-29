@@ -1,0 +1,14 @@
+{
+  "model_type": "phone",
+  "run_id": 5,
+  "params": {
+    "lr": 0.001,
+    "batch_size": 32,
+    "dropout": 0.3,
+    "strategy": "no_freeze"
+  },
+  "best_val_f1": 0.9594046043766262,
+  "test_f1": 0.9347322389231195,
+  "test_acc": 0.9362204724409449,
+  "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.92      0.97      0.95       291\n         Run       0.97      0.89      0.93       159\n         Sit       1.00      0.85      0.92       282\n       Stand       0.95      0.96      0.96       292\n         Lie       0.86      1.00      0.92       246\n\n    accuracy                           0.94      1270\n   macro avg       0.94      0.93      0.93      1270\nweighted avg       0.94      0.94      0.94      1270\n"
+}

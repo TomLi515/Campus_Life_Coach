@@ -1,0 +1,453 @@
+[
+  {
+    "model_type": "phone",
+    "run_id": 1,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.9631874036230503,
+    "test_f1": 0.9402761857482067,
+    "test_acc": 0.9425196850393701,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.96      0.93      0.95       291\n         Run       0.99      0.86      0.92       159\n         Sit       0.95      0.95      0.95       282\n       Stand       0.89      0.99      0.94       292\n         Lie       0.96      0.94      0.95       246\n\n    accuracy                           0.94      1270\n   macro avg       0.95      0.93      0.94      1270\nweighted avg       0.94      0.94      0.94      1270\n",
+    "best_model_path": "..\\models\\dashboard_models\\phone_run_1\\best_model.pth"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 2,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.9543335920275442,
+    "test_f1": 0.9412371857182323,
+    "test_acc": 0.9425196850393701,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.94      0.93      0.93       291\n         Run       0.95      0.89      0.92       159\n         Sit       0.99      0.92      0.95       282\n       Stand       0.91      0.96      0.94       292\n         Lie       0.93      1.00      0.96       246\n\n    accuracy                           0.94      1270\n   macro avg       0.94      0.94      0.94      1270\nweighted avg       0.94      0.94      0.94      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 3,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.9042428591657238,
+    "test_f1": 0.8755556348242781,
+    "test_acc": 0.878740157480315,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.84      0.91      0.87       291\n         Run       0.97      0.75      0.84       159\n         Sit       0.85      0.89      0.87       282\n       Stand       0.90      0.91      0.90       292\n         Lie       0.91      0.87      0.89       246\n\n    accuracy                           0.88      1270\n   macro avg       0.89      0.87      0.88      1270\nweighted avg       0.88      0.88      0.88      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 4,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.9136226385649234,
+    "test_f1": 0.8917552239572017,
+    "test_acc": 0.8929133858267716,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.92      0.91      0.92       291\n         Run       0.98      0.81      0.89       159\n         Sit       0.91      0.87      0.89       282\n       Stand       0.90      0.90      0.90       292\n         Lie       0.79      0.94      0.86       246\n\n    accuracy                           0.89      1270\n   macro avg       0.90      0.89      0.89      1270\nweighted avg       0.90      0.89      0.89      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 5,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.9594046043766262,
+    "test_f1": 0.9347322389231195,
+    "test_acc": 0.9362204724409449,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.92      0.97      0.95       291\n         Run       0.97      0.89      0.93       159\n         Sit       1.00      0.85      0.92       282\n       Stand       0.95      0.96      0.96       292\n         Lie       0.86      1.00      0.92       246\n\n    accuracy                           0.94      1270\n   macro avg       0.94      0.93      0.93      1270\nweighted avg       0.94      0.94      0.94      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 6,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.9504393674373854,
+    "test_f1": 0.9391580222634351,
+    "test_acc": 0.9409448818897638,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.95      0.93      0.94       291\n         Run       0.95      0.89      0.92       159\n         Sit       0.99      0.92      0.95       282\n       Stand       0.90      0.96      0.93       292\n         Lie       0.92      0.99      0.96       246\n\n    accuracy                           0.94      1270\n   macro avg       0.94      0.94      0.94      1270\nweighted avg       0.94      0.94      0.94      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 7,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.9152570801531024,
+    "test_f1": 0.8683925820793776,
+    "test_acc": 0.8716535433070867,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.81      0.94      0.87       291\n         Run       1.00      0.74      0.85       159\n         Sit       0.81      0.89      0.85       282\n       Stand       0.93      0.91      0.92       292\n         Lie       0.90      0.80      0.85       246\n\n    accuracy                           0.87      1270\n   macro avg       0.89      0.86      0.87      1270\nweighted avg       0.88      0.87      0.87      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 8,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.9201130598010094,
+    "test_f1": 0.896061905028821,
+    "test_acc": 0.8992125984251969,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.84      0.93      0.88       291\n         Run       0.97      0.78      0.86       159\n         Sit       0.92      0.89      0.91       282\n       Stand       0.90      0.94      0.92       292\n         Lie       0.91      0.90      0.91       246\n\n    accuracy                           0.90      1270\n   macro avg       0.91      0.89      0.90      1270\nweighted avg       0.90      0.90      0.90      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 9,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.9708435657902115,
+    "test_f1": 0.9451446463490825,
+    "test_acc": 0.947244094488189,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.92      0.96      0.94       291\n         Run       0.94      0.90      0.92       159\n         Sit       0.98      0.93      0.95       282\n       Stand       0.96      0.95      0.95       292\n         Lie       0.93      0.99      0.96       246\n\n    accuracy                           0.95      1270\n   macro avg       0.95      0.94      0.95      1270\nweighted avg       0.95      0.95      0.95      1270\n",
+    "best_model_path": "..\\models\\dashboard_models\\phone_run_9\\best_model.pth"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 10,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.9643556520363722,
+    "test_f1": 0.9496732317716958,
+    "test_acc": 0.952755905511811,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.93      0.94      0.94       291\n         Run       0.95      0.87      0.91       159\n         Sit       0.98      0.98      0.98       282\n       Stand       0.93      0.96      0.94       292\n         Lie       0.98      0.98      0.98       246\n\n    accuracy                           0.95      1270\n   macro avg       0.95      0.95      0.95      1270\nweighted avg       0.95      0.95      0.95      1270\n",
+    "best_model_path": "..\\models\\dashboard_models\\phone_run_10\\best_model.pth"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 11,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.9112017143614747,
+    "test_f1": 0.8879407553720498,
+    "test_acc": 0.889763779527559,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.82      0.94      0.88       291\n         Run       0.99      0.78      0.87       159\n         Sit       0.88      0.92      0.90       282\n       Stand       0.93      0.89      0.91       292\n         Lie       0.89      0.87      0.88       246\n\n    accuracy                           0.89      1270\n   macro avg       0.90      0.88      0.89      1270\nweighted avg       0.89      0.89      0.89      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 12,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.9218795264865983,
+    "test_f1": 0.9012726784277596,
+    "test_acc": 0.9047244094488189,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.87      0.92      0.89       291\n         Run       0.97      0.79      0.87       159\n         Sit       0.92      0.89      0.90       282\n       Stand       0.90      0.95      0.92       292\n         Lie       0.90      0.93      0.92       246\n\n    accuracy                           0.90      1270\n   macro avg       0.91      0.89      0.90      1270\nweighted avg       0.91      0.90      0.90      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 13,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.9752691610410297,
+    "test_f1": 0.9399920729039699,
+    "test_acc": 0.9425196850393701,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.89      0.96      0.92       291\n         Run       0.97      0.86      0.91       159\n         Sit       0.99      0.91      0.95       282\n       Stand       0.96      0.95      0.96       292\n         Lie       0.92      1.00      0.96       246\n\n    accuracy                           0.94      1270\n   macro avg       0.95      0.94      0.94      1270\nweighted avg       0.95      0.94      0.94      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 14,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.9624938338845475,
+    "test_f1": 0.9425643342756972,
+    "test_acc": 0.9448818897637795,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.94      0.93      0.94       291\n         Run       0.95      0.87      0.91       159\n         Sit       0.97      0.96      0.97       282\n       Stand       0.90      0.96      0.93       292\n         Lie       0.98      0.97      0.97       246\n\n    accuracy                           0.94      1270\n   macro avg       0.95      0.94      0.94      1270\nweighted avg       0.95      0.94      0.94      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 15,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.9219718286182321,
+    "test_f1": 0.904205469591991,
+    "test_acc": 0.9062992125984252,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.87      0.93      0.90       291\n         Run       0.96      0.82      0.89       159\n         Sit       0.90      0.90      0.90       282\n       Stand       0.92      0.94      0.93       292\n         Lie       0.92      0.89      0.91       246\n\n    accuracy                           0.91      1270\n   macro avg       0.91      0.90      0.90      1270\nweighted avg       0.91      0.91      0.91      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 16,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.9146480191170425,
+    "test_f1": 0.8770099646356281,
+    "test_acc": 0.8803149606299212,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.83      0.93      0.88       291\n         Run       0.99      0.75      0.86       159\n         Sit       0.95      0.77      0.85       282\n       Stand       0.90      0.94      0.92       292\n         Lie       0.82      0.95      0.88       246\n\n    accuracy                           0.88      1270\n   macro avg       0.90      0.87      0.88      1270\nweighted avg       0.89      0.88      0.88      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 17,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.9583645791963533,
+    "test_f1": 0.9393853270298271,
+    "test_acc": 0.9409448818897638,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.90      0.95      0.92       291\n         Run       1.00      0.84      0.91       159\n         Sit       0.95      0.98      0.97       282\n       Stand       0.91      0.95      0.93       292\n         Lie       0.99      0.94      0.96       246\n\n    accuracy                           0.94      1270\n   macro avg       0.95      0.93      0.94      1270\nweighted avg       0.94      0.94      0.94      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 18,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.9489178627448256,
+    "test_f1": 0.9271375324467279,
+    "test_acc": 0.9291338582677166,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.92      0.93      0.92       291\n         Run       0.99      0.83      0.90       159\n         Sit       0.95      0.93      0.94       282\n       Stand       0.90      0.96      0.93       292\n         Lie       0.93      0.96      0.94       246\n\n    accuracy                           0.93      1270\n   macro avg       0.94      0.92      0.93      1270\nweighted avg       0.93      0.93      0.93      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 19,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.9200952170832368,
+    "test_f1": 0.8958354344955447,
+    "test_acc": 0.8992125984251969,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.85      0.92      0.89       291\n         Run       0.98      0.77      0.86       159\n         Sit       0.90      0.90      0.90       282\n       Stand       0.90      0.94      0.92       292\n         Lie       0.91      0.90      0.91       246\n\n    accuracy                           0.90      1270\n   macro avg       0.91      0.89      0.90      1270\nweighted avg       0.90      0.90      0.90      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 20,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.9111271406596602,
+    "test_f1": 0.8708405548973083,
+    "test_acc": 0.8748031496062992,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.84      0.92      0.88       291\n         Run       0.96      0.75      0.85       159\n         Sit       0.87      0.89      0.88       282\n       Stand       0.91      0.90      0.91       292\n         Lie       0.85      0.85      0.85       246\n\n    accuracy                           0.87      1270\n   macro avg       0.88      0.86      0.87      1270\nweighted avg       0.88      0.87      0.87      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 21,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.9560912237164052,
+    "test_f1": 0.949616218577565,
+    "test_acc": 0.9519685039370078,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.95      0.96      0.95       291\n         Run       0.98      0.87      0.92       159\n         Sit       1.00      0.92      0.96       282\n       Stand       0.92      0.98      0.95       292\n         Lie       0.93      1.00      0.96       246\n\n    accuracy                           0.95      1270\n   macro avg       0.96      0.95      0.95      1270\nweighted avg       0.95      0.95      0.95      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 22,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.9469711467833584,
+    "test_f1": 0.9273630051906931,
+    "test_acc": 0.9291338582677166,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.91      0.91      0.91       291\n         Run       0.99      0.82      0.90       159\n         Sit       0.98      0.93      0.95       282\n       Stand       0.88      0.96      0.92       292\n         Lie       0.93      0.99      0.96       246\n\n    accuracy                           0.93      1270\n   macro avg       0.94      0.92      0.93      1270\nweighted avg       0.93      0.93      0.93      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 23,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.9112302922399879,
+    "test_f1": 0.8920343758427707,
+    "test_acc": 0.8960629921259843,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.85      0.93      0.89       291\n         Run       0.98      0.76      0.86       159\n         Sit       0.91      0.89      0.90       282\n       Stand       0.90      0.93      0.92       292\n         Lie       0.90      0.90      0.90       246\n\n    accuracy                           0.90      1270\n   macro avg       0.91      0.88      0.89      1270\nweighted avg       0.90      0.90      0.90      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 24,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.9085143503053569,
+    "test_f1": 0.885895188208683,
+    "test_acc": 0.8913385826771654,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.83      0.94      0.88       291\n         Run       0.97      0.74      0.84       159\n         Sit       0.89      0.90      0.89       282\n       Stand       0.90      0.95      0.92       292\n         Lie       0.92      0.87      0.89       246\n\n    accuracy                           0.89      1270\n   macro avg       0.90      0.88      0.89      1270\nweighted avg       0.90      0.89      0.89      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 25,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.9564966089721437,
+    "test_f1": 0.9444857463344565,
+    "test_acc": 0.9464566929133859,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.95      0.95      0.95       291\n         Run       0.97      0.87      0.92       159\n         Sit       1.00      0.91      0.95       282\n       Stand       0.91      0.97      0.94       292\n         Lie       0.92      1.00      0.96       246\n\n    accuracy                           0.95      1270\n   macro avg       0.95      0.94      0.94      1270\nweighted avg       0.95      0.95      0.95      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 26,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.9471445248433605,
+    "test_f1": 0.9319305047239425,
+    "test_acc": 0.9338582677165355,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.91      0.93      0.92       291\n         Run       0.99      0.84      0.90       159\n         Sit       0.95      0.95      0.95       282\n       Stand       0.91      0.95      0.93       292\n         Lie       0.96      0.96      0.96       246\n\n    accuracy                           0.93      1270\n   macro avg       0.94      0.93      0.93      1270\nweighted avg       0.94      0.93      0.93      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 27,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.9147980877271011,
+    "test_f1": 0.8887402462255938,
+    "test_acc": 0.8913385826771654,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.85      0.93      0.89       291\n         Run       0.98      0.78      0.87       159\n         Sit       0.88      0.92      0.90       282\n       Stand       0.91      0.90      0.91       292\n         Lie       0.90      0.87      0.88       246\n\n    accuracy                           0.89      1270\n   macro avg       0.90      0.88      0.89      1270\nweighted avg       0.89      0.89      0.89      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 28,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.9204627716311448,
+    "test_f1": 0.894694407091165,
+    "test_acc": 0.8984251968503937,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.85      0.92      0.89       291\n         Run       0.98      0.77      0.86       159\n         Sit       0.90      0.90      0.90       282\n       Stand       0.90      0.94      0.92       292\n         Lie       0.91      0.90      0.91       246\n\n    accuracy                           0.90      1270\n   macro avg       0.91      0.89      0.89      1270\nweighted avg       0.90      0.90      0.90      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 29,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.9564459629600413,
+    "test_f1": 0.9417175804545458,
+    "test_acc": 0.9448818897637795,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.94      0.95      0.94       291\n         Run       0.96      0.86      0.91       159\n         Sit       0.98      0.93      0.96       282\n       Stand       0.92      0.96      0.94       292\n         Lie       0.93      1.00      0.96       246\n\n    accuracy                           0.94      1270\n   macro avg       0.95      0.94      0.94      1270\nweighted avg       0.95      0.94      0.94      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 30,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.949550274768258,
+    "test_f1": 0.9275818582973997,
+    "test_acc": 0.9299212598425197,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.91      0.92      0.91       291\n         Run       0.98      0.83      0.90       159\n         Sit       0.97      0.91      0.94       282\n       Stand       0.90      0.95      0.93       292\n         Lie       0.92      0.99      0.95       246\n\n    accuracy                           0.93      1270\n   macro avg       0.94      0.92      0.93      1270\nweighted avg       0.93      0.93      0.93      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 31,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.9152356399261157,
+    "test_f1": 0.8903037454515059,
+    "test_acc": 0.8929133858267716,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.85      0.92      0.88       291\n         Run       0.97      0.78      0.86       159\n         Sit       0.90      0.88      0.89       282\n       Stand       0.90      0.92      0.91       292\n         Lie       0.90      0.91      0.90       246\n\n    accuracy                           0.89      1270\n   macro avg       0.90      0.88      0.89      1270\nweighted avg       0.90      0.89      0.89      1270\n"
+  },
+  {
+    "model_type": "phone",
+    "run_id": 32,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.9142535039444193,
+    "test_f1": 0.8857989227364691,
+    "test_acc": 0.889763779527559,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.84      0.92      0.88       291\n         Run       0.98      0.76      0.86       159\n         Sit       0.86      0.93      0.89       282\n       Stand       0.90      0.94      0.92       292\n         Lie       0.94      0.83      0.88       246\n\n    accuracy                           0.89      1270\n   macro avg       0.90      0.88      0.89      1270\nweighted avg       0.89      0.89      0.89      1270\n"
+  }
+]

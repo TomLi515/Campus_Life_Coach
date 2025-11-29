@@ -1,14 +1,47 @@
 {
-  "phone_only_f1": 0.2375995230001286,
-  "watch_only_f1": 0.8493483715720455,
-  "fusion_f1": 0.9816409105515953,
-  "train_subjects": [
-    "user2"
-  ],
-  "val_subjects": [
-    "user4"
-  ],
-  "test_subjects": [
-    "user1"
-  ]
+  "best_phone": {
+    "model_type": "phone",
+    "run_id": 10,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.9643556520363722,
+    "test_f1": 0.9496732317716958,
+    "test_acc": 0.952755905511811,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.93      0.94      0.94       291\n         Run       0.95      0.87      0.91       159\n         Sit       0.98      0.98      0.98       282\n       Stand       0.93      0.96      0.94       292\n         Lie       0.98      0.98      0.98       246\n\n    accuracy                           0.95      1270\n   macro avg       0.95      0.95      0.95      1270\nweighted avg       0.95      0.95      0.95      1270\n",
+    "best_model_path": "..\\models\\dashboard_models\\phone_run_10\\best_model.pth"
+  },
+  "best_watch": {
+    "model_type": "watch",
+    "run_id": 9,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.8808955618860816,
+    "test_f1": 0.8918665092358917,
+    "test_acc": 0.8928571428571429,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.87      1.00      0.93        79\n         Run       1.00      0.86      0.93        79\n         Sit       0.82      0.78      0.80        76\n       Stand       0.79      0.82      0.81        79\n         Lie       1.00      1.00      1.00        79\n\n    accuracy                           0.89       392\n   macro avg       0.90      0.89      0.89       392\nweighted avg       0.90      0.89      0.89       392\n",
+    "best_model_path": "..\\models\\dashboard_models\\watch_run_9\\best_model.pth"
+  },
+  "best_fusion": {
+    "model_type": "fusion",
+    "run_id": 10,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.9949042518662772,
+    "test_f1": 0.9898220936522477,
+    "test_acc": 0.9897959183673469,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.99      0.97      0.98        79\n         Run       1.00      0.99      0.99        79\n         Sit       1.00      0.99      0.99        76\n       Stand       0.98      1.00      0.99        79\n         Lie       0.99      1.00      0.99        79\n\n    accuracy                           0.99       392\n   macro avg       0.99      0.99      0.99       392\nweighted avg       0.99      0.99      0.99       392\n",
+    "best_model_path": "..\\models\\dashboard_models\\fusion_run_10\\best_model.pth"
+  }
 }

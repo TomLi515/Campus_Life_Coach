@@ -1,0 +1,14 @@
+{
+  "model_type": "watch",
+  "run_id": 20,
+  "params": {
+    "lr": 0.0001,
+    "batch_size": 32,
+    "dropout": 0.2,
+    "strategy": "freeze_classifier_only"
+  },
+  "best_val_f1": 0.80069053178159,
+  "test_f1": 0.7839958518260842,
+  "test_acc": 0.7831632653061225,
+  "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.84      0.89      0.86        79\n         Run       0.97      0.85      0.91        79\n         Sit       0.60      0.58      0.59        76\n       Stand       0.64      0.73      0.68        79\n         Lie       0.89      0.86      0.88        79\n\n    accuracy                           0.78       392\n   macro avg       0.79      0.78      0.78       392\nweighted avg       0.79      0.78      0.79       392\n"
+}

@@ -1,0 +1,453 @@
+[
+  {
+    "model_type": "fusion",
+    "run_id": 1,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.9948711544065608,
+    "test_f1": 0.9745186241236434,
+    "test_acc": 0.9744897959183674,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.96      0.95      0.96        79\n         Run       0.99      0.97      0.98        79\n         Sit       0.97      0.99      0.98        76\n       Stand       0.96      0.97      0.97        79\n         Lie       0.99      0.99      0.99        79\n\n    accuracy                           0.97       392\n   macro avg       0.97      0.97      0.97       392\nweighted avg       0.97      0.97      0.97       392\n",
+    "best_model_path": "..\\models\\dashboard_models\\fusion_run_1\\best_model.pth"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 2,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.992323176973475,
+    "test_f1": 0.9846573637592909,
+    "test_acc": 0.9846938775510204,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.99      0.97      0.98        79\n         Run       1.00      0.99      0.99        79\n         Sit       0.99      0.97      0.98        76\n       Stand       0.97      0.99      0.98        79\n         Lie       0.98      1.00      0.99        79\n\n    accuracy                           0.98       392\n   macro avg       0.98      0.98      0.98       392\nweighted avg       0.98      0.98      0.98       392\n",
+    "best_model_path": "..\\models\\dashboard_models\\fusion_run_2\\best_model.pth"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 3,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.941029601742908,
+    "test_f1": 0.8713384792440412,
+    "test_acc": 0.8698979591836735,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.78      0.97      0.87        79\n         Run       1.00      0.78      0.88        79\n         Sit       0.74      0.96      0.84        76\n       Stand       0.96      0.84      0.89        79\n         Lie       0.98      0.80      0.88        79\n\n    accuracy                           0.87       392\n   macro avg       0.89      0.87      0.87       392\nweighted avg       0.89      0.87      0.87       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 4,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.9410107660975398,
+    "test_f1": 0.9391469472442273,
+    "test_acc": 0.9387755102040817,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.87      0.95      0.91        79\n         Run       1.00      0.91      0.95        79\n         Sit       0.95      0.93      0.94        76\n       Stand       0.92      0.92      0.92        79\n         Lie       0.96      0.97      0.97        79\n\n    accuracy                           0.94       392\n   macro avg       0.94      0.94      0.94       392\nweighted avg       0.94      0.94      0.94       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 5,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.9923218869197988,
+    "test_f1": 0.979609593058654,
+    "test_acc": 0.9795918367346939,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.97      0.96      0.97        79\n         Run       1.00      0.99      0.99        79\n         Sit       0.99      0.97      0.98        76\n       Stand       0.96      0.99      0.97        79\n         Lie       0.97      0.99      0.98        79\n\n    accuracy                           0.98       392\n   macro avg       0.98      0.98      0.98       392\nweighted avg       0.98      0.98      0.98       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 6,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.9948698643528846,
+    "test_f1": 0.9846730870297312,
+    "test_acc": 0.9846938775510204,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.99      0.97      0.98        79\n         Run       1.00      0.99      0.99        79\n         Sit       0.99      0.97      0.98        76\n       Stand       0.96      0.99      0.97        79\n         Lie       0.99      1.00      0.99        79\n\n    accuracy                           0.98       392\n   macro avg       0.98      0.98      0.98       392\nweighted avg       0.98      0.98      0.98       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 7,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.924721329209134,
+    "test_f1": 0.9287312691786763,
+    "test_acc": 0.9285714285714286,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.86      0.96      0.91        79\n         Run       0.99      0.96      0.97        79\n         Sit       0.93      0.88      0.91        76\n       Stand       0.97      0.92      0.95        79\n         Lie       0.90      0.91      0.91        79\n\n    accuracy                           0.93       392\n   macro avg       0.93      0.93      0.93       392\nweighted avg       0.93      0.93      0.93       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 8,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.9464666818292921,
+    "test_f1": 0.8881406974814683,
+    "test_acc": 0.8877551020408163,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.74      0.96      0.84        79\n         Run       1.00      0.94      0.97        79\n         Sit       0.84      0.75      0.79        76\n       Stand       0.98      0.82      0.90        79\n         Lie       0.94      0.96      0.95        79\n\n    accuracy                           0.89       392\n   macro avg       0.90      0.89      0.89       392\nweighted avg       0.90      0.89      0.89       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 9,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.997452229299363,
+    "test_f1": 0.9822042481021243,
+    "test_acc": 0.9821428571428571,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.97      0.97      0.97        79\n         Run       1.00      0.99      0.99        79\n         Sit       0.99      0.97      0.98        76\n       Stand       0.95      0.99      0.97        79\n         Lie       1.00      0.99      0.99        79\n\n    accuracy                           0.98       392\n   macro avg       0.98      0.98      0.98       392\nweighted avg       0.98      0.98      0.98       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 10,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.9949042518662772,
+    "test_f1": 0.9898220936522477,
+    "test_acc": 0.9897959183673469,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.99      0.97      0.98        79\n         Run       1.00      0.99      0.99        79\n         Sit       1.00      0.99      0.99        76\n       Stand       0.98      1.00      0.99        79\n         Lie       0.99      1.00      0.99        79\n\n    accuracy                           0.99       392\n   macro avg       0.99      0.99      0.99       392\nweighted avg       0.99      0.99      0.99       392\n",
+    "best_model_path": "..\\models\\dashboard_models\\fusion_run_10\\best_model.pth"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 11,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.9484133047782978,
+    "test_f1": 0.9178887819804336,
+    "test_acc": 0.9183673469387755,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.90      0.92      0.91        79\n         Run       0.99      0.95      0.97        79\n         Sit       0.87      0.95      0.91        76\n       Stand       0.89      0.96      0.93        79\n         Lie       0.96      0.81      0.88        79\n\n    accuracy                           0.92       392\n   macro avg       0.92      0.92      0.92       392\nweighted avg       0.92      0.92      0.92       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 12,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.9562387612387612,
+    "test_f1": 0.931320832736418,
+    "test_acc": 0.9311224489795918,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.87      0.95      0.91        79\n         Run       1.00      0.92      0.96        79\n         Sit       0.98      0.84      0.91        76\n       Stand       0.97      0.95      0.96        79\n         Lie       0.86      0.99      0.92        79\n\n    accuracy                           0.93       392\n   macro avg       0.94      0.93      0.93       392\nweighted avg       0.94      0.93      0.93       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 13,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.9948711544065608,
+    "test_f1": 0.9665916712564986,
+    "test_acc": 0.9668367346938775,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.99      0.95      0.97        79\n         Run       1.00      0.99      0.99        79\n         Sit       0.99      0.91      0.95        76\n       Stand       0.94      1.00      0.97        79\n         Lie       0.93      0.99      0.96        79\n\n    accuracy                           0.97       392\n   macro avg       0.97      0.97      0.97       392\nweighted avg       0.97      0.97      0.97       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 14,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.9948711544065608,
+    "test_f1": 0.9822229699955936,
+    "test_acc": 0.9821428571428571,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.96      0.97      0.97        79\n         Run       1.00      0.99      0.99        79\n         Sit       1.00      0.97      0.99        76\n       Stand       0.96      0.97      0.97        79\n         Lie       0.99      1.00      0.99        79\n\n    accuracy                           0.98       392\n   macro avg       0.98      0.98      0.98       392\nweighted avg       0.98      0.98      0.98       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 15,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.9532967384586692,
+    "test_f1": 0.9413292847503374,
+    "test_acc": 0.9413265306122449,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.91      0.94      0.93        79\n         Run       0.99      0.96      0.97        79\n         Sit       0.90      0.95      0.92        76\n       Stand       0.94      0.96      0.95        79\n         Lie       0.97      0.90      0.93        79\n\n    accuracy                           0.94       392\n   macro avg       0.94      0.94      0.94       392\nweighted avg       0.94      0.94      0.94       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 16,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.9561421868404963,
+    "test_f1": 0.9406053270277642,
+    "test_acc": 0.9413265306122449,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.91      0.97      0.94        79\n         Run       1.00      0.94      0.97        79\n         Sit       1.00      0.83      0.91        76\n       Stand       0.93      0.96      0.94        79\n         Lie       0.90      1.00      0.95        79\n\n    accuracy                           0.94       392\n   macro avg       0.95      0.94      0.94       392\nweighted avg       0.95      0.94      0.94       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 17,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.992323176973475,
+    "test_f1": 0.9821779391394001,
+    "test_acc": 0.9821428571428571,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.97      0.96      0.97        79\n         Run       1.00      0.99      0.99        79\n         Sit       0.99      0.99      0.99        76\n       Stand       0.96      0.97      0.97        79\n         Lie       0.99      1.00      0.99        79\n\n    accuracy                           0.98       392\n   macro avg       0.98      0.98      0.98       392\nweighted avg       0.98      0.98      0.98       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 18,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.9923068492688746,
+    "test_f1": 0.9822102908173518,
+    "test_acc": 0.9821428571428571,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.96      0.97      0.97        79\n         Run       1.00      0.99      0.99        79\n         Sit       0.99      0.99      0.99        76\n       Stand       0.97      0.97      0.97        79\n         Lie       0.99      0.99      0.99        79\n\n    accuracy                           0.98       392\n   macro avg       0.98      0.98      0.98       392\nweighted avg       0.98      0.98      0.98       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 19,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.9614234192432616,
+    "test_f1": 0.9491365287286747,
+    "test_acc": 0.9489795918367347,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.88      0.95      0.91        79\n         Run       0.99      0.96      0.97        79\n         Sit       0.97      0.91      0.94        76\n       Stand       0.96      0.95      0.96        79\n         Lie       0.95      0.97      0.96        79\n\n    accuracy                           0.95       392\n   macro avg       0.95      0.95      0.95       392\nweighted avg       0.95      0.95      0.95       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 20,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.9440974799112631,
+    "test_f1": 0.9255987615262278,
+    "test_acc": 0.9260204081632653,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.94      0.92      0.93        79\n         Run       1.00      0.94      0.97        79\n         Sit       0.83      0.97      0.90        76\n       Stand       0.93      0.99      0.96        79\n         Lie       0.96      0.81      0.88        79\n\n    accuracy                           0.93       392\n   macro avg       0.93      0.93      0.93       392\nweighted avg       0.93      0.93      0.93       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 21,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.9948872795375776,
+    "test_f1": 0.977075531993715,
+    "test_acc": 0.9770408163265306,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.97      0.95      0.96        79\n         Run       1.00      0.99      0.99        79\n         Sit       0.99      0.97      0.98        76\n       Stand       0.95      0.99      0.97        79\n         Lie       0.97      0.99      0.98        79\n\n    accuracy                           0.98       392\n   macro avg       0.98      0.98      0.98       392\nweighted avg       0.98      0.98      0.98       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 22,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.9897593987740233,
+    "test_f1": 0.9796627229485514,
+    "test_acc": 0.9795918367346939,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.96      0.96      0.96        79\n         Run       1.00      0.99      0.99        79\n         Sit       0.99      0.99      0.99        76\n       Stand       0.97      0.97      0.97        79\n         Lie       0.97      0.99      0.98        79\n\n    accuracy                           0.98       392\n   macro avg       0.98      0.98      0.98       392\nweighted avg       0.98      0.98      0.98       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 23,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.9462667994289117,
+    "test_f1": 0.9254629062950439,
+    "test_acc": 0.9260204081632653,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.91      0.97      0.94        79\n         Run       1.00      0.95      0.97        79\n         Sit       0.95      0.80      0.87        76\n       Stand       0.84      0.96      0.89        79\n         Lie       0.96      0.94      0.95        79\n\n    accuracy                           0.93       392\n   macro avg       0.93      0.93      0.93       392\nweighted avg       0.93      0.93      0.93       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 24,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.9563489476078507,
+    "test_f1": 0.9490858139925598,
+    "test_acc": 0.9489795918367347,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.93      0.94      0.93        79\n         Run       1.00      0.95      0.97        79\n         Sit       0.92      0.96      0.94        76\n       Stand       0.95      0.94      0.94        79\n         Lie       0.95      0.96      0.96        79\n\n    accuracy                           0.95       392\n   macro avg       0.95      0.95      0.95       392\nweighted avg       0.95      0.95      0.95       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 25,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.992323176973475,
+    "test_f1": 0.9872734062102181,
+    "test_acc": 0.9872448979591837,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.99      0.96      0.97        79\n         Run       1.00      0.99      0.99        79\n         Sit       1.00      0.99      0.99        76\n       Stand       0.98      1.00      0.99        79\n         Lie       0.98      1.00      0.99        79\n\n    accuracy                           0.99       392\n   macro avg       0.99      0.99      0.99       392\nweighted avg       0.99      0.99      0.99       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 26,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.992323176973475,
+    "test_f1": 0.9746148431282868,
+    "test_acc": 0.9744897959183674,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.95      0.95      0.95        79\n         Run       1.00      0.97      0.99        79\n         Sit       0.99      0.99      0.99        76\n       Stand       0.96      0.97      0.97        79\n         Lie       0.97      0.99      0.98        79\n\n    accuracy                           0.97       392\n   macro avg       0.97      0.97      0.97       392\nweighted avg       0.97      0.97      0.97       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 27,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.9513192887147834,
+    "test_f1": 0.9465068902157918,
+    "test_acc": 0.9464285714285714,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.92      0.96      0.94        79\n         Run       1.00      0.94      0.97        79\n         Sit       0.91      0.95      0.93        76\n       Stand       0.96      0.92      0.94        79\n         Lie       0.95      0.96      0.96        79\n\n    accuracy                           0.95       392\n   macro avg       0.95      0.95      0.95       392\nweighted avg       0.95      0.95      0.95       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 28,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.9567271724171935,
+    "test_f1": 0.9618661272684387,
+    "test_acc": 0.9617346938775511,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.93      0.96      0.94        79\n         Run       1.00      0.95      0.97        79\n         Sit       0.97      0.95      0.96        76\n       Stand       0.97      0.97      0.97        79\n         Lie       0.94      0.97      0.96        79\n\n    accuracy                           0.96       392\n   macro avg       0.96      0.96      0.96       392\nweighted avg       0.96      0.96      0.96       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 29,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.992323176973475,
+    "test_f1": 0.9898385192279224,
+    "test_acc": 0.9897959183673469,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.97      0.99      0.98        79\n         Run       1.00      0.99      0.99        79\n         Sit       1.00      0.99      0.99        76\n       Stand       0.99      0.99      0.99        79\n         Lie       0.99      1.00      0.99        79\n\n    accuracy                           0.99       392\n   macro avg       0.99      0.99      0.99       392\nweighted avg       0.99      0.99      0.99       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 30,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.9922910443436436,
+    "test_f1": 0.9746148431282868,
+    "test_acc": 0.9744897959183674,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.95      0.95      0.95        79\n         Run       1.00      0.97      0.99        79\n         Sit       0.99      0.99      0.99        76\n       Stand       0.96      0.97      0.97        79\n         Lie       0.97      0.99      0.98        79\n\n    accuracy                           0.97       392\n   macro avg       0.97      0.97      0.97       392\nweighted avg       0.97      0.97      0.97       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 31,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.9461412801035444,
+    "test_f1": 0.949287438862546,
+    "test_acc": 0.9489795918367347,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.92      0.96      0.94        79\n         Run       1.00      0.94      0.97        79\n         Sit       0.97      0.91      0.94        76\n       Stand       0.99      0.96      0.97        79\n         Lie       0.89      0.97      0.93        79\n\n    accuracy                           0.95       392\n   macro avg       0.95      0.95      0.95       392\nweighted avg       0.95      0.95      0.95       392\n"
+  },
+  {
+    "model_type": "fusion",
+    "run_id": 32,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.9462510997666124,
+    "test_f1": 0.9436002112678963,
+    "test_acc": 0.9438775510204082,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.92      0.96      0.94        79\n         Run       1.00      0.95      0.97        79\n         Sit       0.96      0.87      0.91        76\n       Stand       0.90      0.97      0.93        79\n         Lie       0.96      0.96      0.96        79\n\n    accuracy                           0.94       392\n   macro avg       0.95      0.94      0.94       392\nweighted avg       0.95      0.94      0.94       392\n"
+  }
+]

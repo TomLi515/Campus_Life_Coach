@@ -1,0 +1,14 @@
+{
+  "model_type": "fusion",
+  "run_id": 11,
+  "params": {
+    "lr": 0.001,
+    "batch_size": 64,
+    "dropout": 0.2,
+    "strategy": "freeze_all_but_last"
+  },
+  "best_val_f1": 0.9484133047782978,
+  "test_f1": 0.9178887819804336,
+  "test_acc": 0.9183673469387755,
+  "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.90      0.92      0.91        79\n         Run       0.99      0.95      0.97        79\n         Sit       0.87      0.95      0.91        76\n       Stand       0.89      0.96      0.93        79\n         Lie       0.96      0.81      0.88        79\n\n    accuracy                           0.92       392\n   macro avg       0.92      0.92      0.92       392\nweighted avg       0.92      0.92      0.92       392\n"
+}

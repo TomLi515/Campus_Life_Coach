@@ -1,0 +1,455 @@
+[
+  {
+    "model_type": "watch",
+    "run_id": 1,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.8812041985183574,
+    "test_f1": 0.8402384390582105,
+    "test_acc": 0.8469387755102041,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.90      0.96      0.93        79\n         Run       1.00      0.89      0.94        79\n         Sit       0.65      0.88      0.75        76\n       Stand       0.87      0.51      0.64        79\n         Lie       0.89      1.00      0.94        79\n\n    accuracy                           0.85       392\n   macro avg       0.86      0.85      0.84       392\nweighted avg       0.86      0.85      0.84       392\n",
+    "best_model_path": "..\\models\\dashboard_models\\watch_run_1\\best_model.pth"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 2,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.8621148081168759,
+    "test_f1": 0.85026887777799,
+    "test_acc": 0.8545918367346939,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.85      0.95      0.90        79\n         Run       0.99      0.86      0.92        79\n         Sit       0.85      0.58      0.69        76\n       Stand       0.69      0.89      0.78        79\n         Lie       0.95      0.99      0.97        79\n\n    accuracy                           0.85       392\n   macro avg       0.87      0.85      0.85       392\nweighted avg       0.87      0.85      0.85       392\n",
+    "best_model_path": "..\\models\\dashboard_models\\watch_run_2\\best_model.pth"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 3,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.7828401567019388,
+    "test_f1": 0.7144727853513482,
+    "test_acc": 0.7423469387755102,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.78      0.92      0.85        79\n         Run       1.00      0.80      0.89        79\n         Sit       0.52      0.87      0.65        76\n       Stand       0.61      0.18      0.27        79\n         Lie       0.88      0.95      0.91        79\n\n    accuracy                           0.74       392\n   macro avg       0.76      0.74      0.71       392\nweighted avg       0.76      0.74      0.71       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 4,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.7961228512019172,
+    "test_f1": 0.7253097461366547,
+    "test_acc": 0.7551020408163265,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.79      0.90      0.84        79\n         Run       0.99      0.84      0.90        79\n         Sit       0.84      0.21      0.34        76\n       Stand       0.55      0.86      0.67        79\n         Lie       0.81      0.95      0.87        79\n\n    accuracy                           0.76       392\n   macro avg       0.80      0.75      0.73       392\nweighted avg       0.79      0.76      0.73       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 5,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.8891278866225951,
+    "test_f1": 0.8585121303593398,
+    "test_acc": 0.8571428571428571,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.83      0.96      0.89        79\n         Run       1.00      0.85      0.92        79\n         Sit       0.73      0.83      0.78        76\n       Stand       0.81      0.81      0.81        79\n         Lie       0.97      0.84      0.90        79\n\n    accuracy                           0.86       392\n   macro avg       0.87      0.86      0.86       392\nweighted avg       0.87      0.86      0.86       392\n",
+    "best_model_path": "..\\models\\dashboard_models\\watch_run_5\\best_model.pth"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 6,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.889139465595456,
+    "test_f1": 0.8766062753208532,
+    "test_acc": 0.8775510204081632,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.88      0.92      0.90        79\n         Run       1.00      0.86      0.93        79\n         Sit       0.82      0.74      0.78        76\n       Stand       0.76      0.86      0.81        79\n         Lie       0.94      1.00      0.97        79\n\n    accuracy                           0.88       392\n   macro avg       0.88      0.88      0.88       392\nweighted avg       0.88      0.88      0.88       392\n",
+    "best_model_path": "..\\models\\dashboard_models\\watch_run_6\\best_model.pth"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 7,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.7908930901383731,
+    "test_f1": 0.7521004084756749,
+    "test_acc": 0.7525510204081632,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.92      0.82      0.87        79\n         Run       0.94      0.91      0.92        79\n         Sit       0.51      0.49      0.50        76\n       Stand       0.61      0.90      0.72        79\n         Lie       0.91      0.63      0.75        79\n\n    accuracy                           0.75       392\n   macro avg       0.78      0.75      0.75       392\nweighted avg       0.78      0.75      0.75       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 8,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.8234360923579539,
+    "test_f1": 0.7997742676343302,
+    "test_acc": 0.8061224489795918,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.83      0.87      0.85        79\n         Run       0.98      0.81      0.89        79\n         Sit       0.83      0.51      0.63        76\n       Stand       0.65      0.82      0.73        79\n         Lie       0.81      1.00      0.90        79\n\n    accuracy                           0.81       392\n   macro avg       0.82      0.80      0.80       392\nweighted avg       0.82      0.81      0.80       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 9,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.8808955618860816,
+    "test_f1": 0.8918665092358917,
+    "test_acc": 0.8928571428571429,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.87      1.00      0.93        79\n         Run       1.00      0.86      0.93        79\n         Sit       0.82      0.78      0.80        76\n       Stand       0.79      0.82      0.81        79\n         Lie       1.00      1.00      1.00        79\n\n    accuracy                           0.89       392\n   macro avg       0.90      0.89      0.89       392\nweighted avg       0.90      0.89      0.89       392\n",
+    "best_model_path": "..\\models\\dashboard_models\\watch_run_9\\best_model.pth"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 10,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.8286473181083887,
+    "test_f1": 0.8097836719479116,
+    "test_acc": 0.8214285714285714,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.88      0.90      0.89        79\n         Run       0.99      0.87      0.93        79\n         Sit       0.84      0.41      0.55        76\n       Stand       0.62      0.92      0.74        79\n         Lie       0.91      0.99      0.95        79\n\n    accuracy                           0.82       392\n   macro avg       0.85      0.82      0.81       392\nweighted avg       0.85      0.82      0.81       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 11,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.7938976273073296,
+    "test_f1": 0.7345204495580435,
+    "test_acc": 0.7653061224489796,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.79      0.89      0.83        79\n         Run       0.97      0.84      0.90        79\n         Sit       0.95      0.24      0.38        76\n       Stand       0.64      0.89      0.74        79\n         Lie       0.72      0.96      0.82        79\n\n    accuracy                           0.77       392\n   macro avg       0.81      0.76      0.73       392\nweighted avg       0.81      0.77      0.74       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 12,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.7882662700575758,
+    "test_f1": 0.789779835032029,
+    "test_acc": 0.8086734693877551,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.87      0.90      0.88        79\n         Run       0.97      0.91      0.94        79\n         Sit       0.96      0.34      0.50        76\n       Stand       0.63      0.91      0.74        79\n         Lie       0.81      0.96      0.88        79\n\n    accuracy                           0.81       392\n   macro avg       0.85      0.81      0.79       392\nweighted avg       0.85      0.81      0.79       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 13,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.8941530238804434,
+    "test_f1": 0.8538478890452085,
+    "test_acc": 0.8571428571428571,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.86      0.99      0.92        79\n         Run       1.00      0.87      0.93        79\n         Sit       0.66      0.87      0.75        76\n       Stand       0.85      0.57      0.68        79\n         Lie       0.99      0.99      0.99        79\n\n    accuracy                           0.86       392\n   macro avg       0.87      0.86      0.85       392\nweighted avg       0.87      0.86      0.85       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 14,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.8559405034324943,
+    "test_f1": 0.8546576111043638,
+    "test_acc": 0.8596938775510204,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.89      0.91      0.90        79\n         Run       0.99      0.87      0.93        79\n         Sit       0.88      0.57      0.69        76\n       Stand       0.69      0.94      0.80        79\n         Lie       0.93      1.00      0.96        79\n\n    accuracy                           0.86       392\n   macro avg       0.87      0.86      0.85       392\nweighted avg       0.87      0.86      0.86       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 15,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.7875582134048484,
+    "test_f1": 0.7924112128324544,
+    "test_acc": 0.8010204081632653,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.80      0.86      0.83        79\n         Run       0.94      0.86      0.90        79\n         Sit       0.83      0.46      0.59        76\n       Stand       0.64      0.87      0.74        79\n         Lie       0.86      0.94      0.90        79\n\n    accuracy                           0.80       392\n   macro avg       0.82      0.80      0.79       392\nweighted avg       0.82      0.80      0.79       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 16,
+    "params": {
+      "lr": 0.001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.7950081993036384,
+    "test_f1": 0.7551141974252842,
+    "test_acc": 0.7704081632653061,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.85      0.91      0.88        79\n         Run       1.00      0.84      0.91        79\n         Sit       0.69      0.36      0.47        76\n       Stand       0.63      0.76      0.69        79\n         Lie       0.72      0.97      0.83        79\n\n    accuracy                           0.77       392\n   macro avg       0.78      0.77      0.76       392\nweighted avg       0.78      0.77      0.76       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 17,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.8869466540121079,
+    "test_f1": 0.8656726243421795,
+    "test_acc": 0.8673469387755102,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.85      0.99      0.91        79\n         Run       1.00      0.86      0.93        79\n         Sit       0.83      0.64      0.73        76\n       Stand       0.71      0.89      0.79        79\n         Lie       1.00      0.95      0.97        79\n\n    accuracy                           0.87       392\n   macro avg       0.88      0.87      0.87       392\nweighted avg       0.88      0.87      0.87       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 18,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.87596730663788,
+    "test_f1": 0.8565264108140938,
+    "test_acc": 0.8596938775510204,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.88      0.94      0.91        79\n         Run       0.99      0.85      0.91        79\n         Sit       0.83      0.63      0.72        76\n       Stand       0.72      0.89      0.80        79\n         Lie       0.92      0.99      0.95        79\n\n    accuracy                           0.86       392\n   macro avg       0.87      0.86      0.86       392\nweighted avg       0.87      0.86      0.86       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 19,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.7445632223611018,
+    "test_f1": 0.7264871513476562,
+    "test_acc": 0.7295918367346939,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.78      0.91      0.84        79\n         Run       1.00      0.82      0.90        79\n         Sit       0.49      0.87      0.62        76\n       Stand       0.81      0.37      0.50        79\n         Lie       0.86      0.68      0.76        79\n\n    accuracy                           0.73       392\n   macro avg       0.79      0.73      0.73       392\nweighted avg       0.79      0.73      0.73       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 20,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.2,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.80069053178159,
+    "test_f1": 0.7839958518260842,
+    "test_acc": 0.7831632653061225,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.84      0.89      0.86        79\n         Run       0.97      0.85      0.91        79\n         Sit       0.60      0.58      0.59        76\n       Stand       0.64      0.73      0.68        79\n         Lie       0.89      0.86      0.88        79\n\n    accuracy                           0.78       392\n   macro avg       0.79      0.78      0.78       392\nweighted avg       0.79      0.78      0.79       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 21,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.8889890643311604,
+    "test_f1": 0.8744418473696488,
+    "test_acc": 0.875,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.87      0.96      0.92        79\n         Run       1.00      0.86      0.93        79\n         Sit       0.79      0.71      0.75        76\n       Stand       0.75      0.87      0.81        79\n         Lie       0.99      0.96      0.97        79\n\n    accuracy                           0.88       392\n   macro avg       0.88      0.87      0.87       392\nweighted avg       0.88      0.88      0.88       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 22,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.8837509262524105,
+    "test_f1": 0.8625879113103027,
+    "test_acc": 0.8647959183673469,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.89      0.91      0.90        79\n         Run       0.99      0.86      0.92        79\n         Sit       0.84      0.67      0.74        76\n       Stand       0.73      0.87      0.80        79\n         Lie       0.91      1.00      0.95        79\n\n    accuracy                           0.86       392\n   macro avg       0.87      0.86      0.86       392\nweighted avg       0.87      0.86      0.86       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 23,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.7938917427422433,
+    "test_f1": 0.7063721483269224,
+    "test_acc": 0.7525510204081632,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.82      0.90      0.86        79\n         Run       0.99      0.84      0.90        79\n         Sit       0.91      0.13      0.23        76\n       Stand       0.59      0.92      0.72        79\n         Lie       0.72      0.95      0.82        79\n\n    accuracy                           0.75       392\n   macro avg       0.80      0.75      0.71       392\nweighted avg       0.80      0.75      0.71       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 24,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 32,
+      "dropout": 0.3,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.7837072018210348,
+    "test_f1": 0.7895968755140277,
+    "test_acc": 0.8010204081632653,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.77      0.91      0.83        79\n         Run       0.99      0.84      0.90        79\n         Sit       0.89      0.41      0.56        76\n       Stand       0.63      0.91      0.75        79\n         Lie       0.89      0.92      0.91        79\n\n    accuracy                           0.80       392\n   macro avg       0.83      0.80      0.79       392\nweighted avg       0.83      0.80      0.79       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 25,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.8865105301848102,
+    "test_f1": 0.8868139652798419,
+    "test_acc": 0.8877551020408163,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.90      0.94      0.92        79\n         Run       1.00      0.87      0.93        79\n         Sit       0.83      0.78      0.80        76\n       Stand       0.80      0.85      0.82        79\n         Lie       0.92      1.00      0.96        79\n\n    accuracy                           0.89       392\n   macro avg       0.89      0.89      0.89       392\nweighted avg       0.89      0.89      0.89       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 26,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.8729552161530701,
+    "test_f1": 0.8681810108861703,
+    "test_acc": 0.8698979591836735,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.88      0.92      0.90        79\n         Run       1.00      0.86      0.93        79\n         Sit       0.84      0.68      0.75        76\n       Stand       0.75      0.90      0.82        79\n         Lie       0.92      0.97      0.94        79\n\n    accuracy                           0.87       392\n   macro avg       0.88      0.87      0.87       392\nweighted avg       0.88      0.87      0.87       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 27,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.7939775111483681,
+    "test_f1": 0.7457093752183374,
+    "test_acc": 0.7729591836734694,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.81      0.87      0.84        79\n         Run       0.97      0.84      0.90        79\n         Sit       0.95      0.26      0.41        76\n       Stand       0.63      0.92      0.75        79\n         Lie       0.73      0.95      0.82        79\n\n    accuracy                           0.77       392\n   macro avg       0.82      0.77      0.75       392\nweighted avg       0.82      0.77      0.75       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 28,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.2,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.799198864296278,
+    "test_f1": 0.7504066166544069,
+    "test_acc": 0.7678571428571429,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.78      0.91      0.84        79\n         Run       1.00      0.80      0.89        79\n         Sit       0.74      0.34      0.47        76\n       Stand       0.66      0.82      0.73        79\n         Lie       0.72      0.95      0.82        79\n\n    accuracy                           0.77       392\n   macro avg       0.78      0.76      0.75       392\nweighted avg       0.78      0.77      0.75       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 29,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "no_freeze"
+    },
+    "best_val_f1": 0.8887449122695917,
+    "test_f1": 0.8674866282332513,
+    "test_acc": 0.8698979591836735,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.85      0.97      0.91        79\n         Run       1.00      0.86      0.93        79\n         Sit       0.82      0.66      0.73        76\n       Stand       0.74      0.86      0.80        79\n         Lie       0.97      0.99      0.98        79\n\n    accuracy                           0.87       392\n   macro avg       0.88      0.87      0.87       392\nweighted avg       0.88      0.87      0.87       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 30,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "freeze_enc_then_finetune"
+    },
+    "best_val_f1": 0.8610856711247692,
+    "test_f1": 0.849041723526471,
+    "test_acc": 0.8545918367346939,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.88      0.94      0.91        79\n         Run       1.00      0.86      0.93        79\n         Sit       0.88      0.55      0.68        76\n       Stand       0.69      0.92      0.79        79\n         Lie       0.91      0.99      0.95        79\n\n    accuracy                           0.85       392\n   macro avg       0.87      0.85      0.85       392\nweighted avg       0.87      0.85      0.85       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 31,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "freeze_all_but_last"
+    },
+    "best_val_f1": 0.782823449445847,
+    "test_f1": 0.7732992980952849,
+    "test_acc": 0.7806122448979592,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.75      0.90      0.82        79\n         Run       0.98      0.82      0.90        79\n         Sit       0.75      0.47      0.58        76\n       Stand       0.66      0.77      0.71        79\n         Lie       0.81      0.92      0.86        79\n\n    accuracy                           0.78       392\n   macro avg       0.79      0.78      0.77       392\nweighted avg       0.79      0.78      0.77       392\n"
+  },
+  {
+    "model_type": "watch",
+    "run_id": 32,
+    "params": {
+      "lr": 0.0001,
+      "batch_size": 64,
+      "dropout": 0.3,
+      "strategy": "freeze_classifier_only"
+    },
+    "best_val_f1": 0.8044201814092136,
+    "test_f1": 0.7915598131932855,
+    "test_acc": 0.798469387755102,
+    "test_report": "              precision    recall  f1-score   support\n\n        Walk       0.84      0.89      0.86        79\n         Run       0.97      0.87      0.92        79\n         Sit       0.73      0.49      0.58        76\n       Stand       0.65      0.78      0.71        79\n         Lie       0.82      0.95      0.88        79\n\n    accuracy                           0.80       392\n   macro avg       0.80      0.80      0.79       392\nweighted avg       0.80      0.80      0.79       392\n"
+  }
+]
