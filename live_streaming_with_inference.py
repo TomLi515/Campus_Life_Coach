@@ -42,7 +42,7 @@ PLOT_MAX_POINTS = 5000
 # How many prediction points to show in the timeline
 PREDICTION_PLOT_MAX = 500
 
-UPDATE_FREQ_MS = 100
+UPDATE_FREQ_MS = 200
 WINDOW_SIZE = 150
 STEP_SIZE_RT = 75
 TARGET_HZ = 50
@@ -208,6 +208,7 @@ def predict_phone(window):
             return ACTIVITY_LABELS[np.argmax(probs)], probs
     except Exception as e:
         print("phone prediction error:", e)
+        traceback.print_exc()
         return "Error", np.zeros(len(ACTIVITY_LABELS))
 
 
@@ -230,6 +231,7 @@ def predict_watch(window):
             return ACTIVITY_LABELS[np.argmax(probs)], probs
     except Exception as e:
         print("watch prediction error:", e)
+        traceback.print_exc()
         return "Error", np.zeros(len(ACTIVITY_LABELS))
 
 
@@ -258,89 +260,124 @@ def predict_fusion(phone_window, watch_window):
             return ACTIVITY_LABELS[np.argmax(probs)], probs
     except Exception as e:
         print("fusion prediction error:", e)
+        traceback.print_exc()
         return "Error", np.zeros(len(ACTIVITY_LABELS))
 
 
 def make_predictions():
-    """Make predictions if windows available."""
+    """
+    Non-blocking friendly prediction flow:
+    1) Acquire buffer_lock briefly and copy the relevant recent samples (WINDOW_SIZE).
+    2) Release lock and run model inference on copies (this may be slow).
+    3) Re-acquire lock briefly and append predictions & probs to shared deques.
+    This prevents holding the global buffer_lock while performing potentially slow inference.
+    """
     global both_ready_flag, last_both_ready_time
+
+    # Step 1: copy windows under lock
+    with buffer_lock:
+        phone_ready = len(phone_buffer) >= WINDOW_SIZE
+        watch_ready = len(watch_buffer) >= WINDOW_SIZE
+
+        phone_recent = list(phone_buffer)[-WINDOW_SIZE:] if phone_ready else None
+        watch_recent = list(watch_buffer)[-WINDOW_SIZE:] if watch_ready else None
+
+    # Step 2: build numpy windows (outside lock) and run predictions
+    phone_win = None
+    watch_win = None
+    if phone_recent is not None:
+        phone_win = np.array(
+            [
+                [s["ax"] for s in phone_recent],
+                [s["ay"] for s in phone_recent],
+                [s["az"] for s in phone_recent],
+                [s["gx"] for s in phone_recent],
+                [s["gy"] for s in phone_recent],
+                [s["gz"] for s in phone_recent],
+            ],
+            dtype=np.float32,
+        )
+    if watch_recent is not None:
+        watch_win = np.array(
+            [
+                [s["ax"] for s in watch_recent],
+                [s["ay"] for s in watch_recent],
+                [s["az"] for s in watch_recent],
+                [s["gx"] for s in watch_recent],
+                [s["gy"] for s in watch_recent],
+                [s["gz"] for s in watch_recent],
+            ],
+            dtype=np.float32,
+        )
+
     now = datetime.now()
-    phone_win = create_window_from_buffer(phone_buffer)
-    watch_win = create_window_from_buffer(watch_buffer)
-    phone_ready = phone_win is not None
-    watch_ready = watch_win is not None
+    phone_label, phone_p = ("---", np.zeros(len(ACTIVITY_LABELS)))
+    watch_label, watch_p = ("---", np.zeros(len(ACTIVITY_LABELS)))
+    fusion_label, fusion_p = ("---", np.zeros(len(ACTIVITY_LABELS)))
+    made_fusion = False
 
-    if phone_ready:
-        p_label, p_probs = predict_phone(phone_win)
-        phone_predictions.append(p_label)
-        phone_probs.append(p_probs)
-        # print a concise log
-        print(
-            f"[phone_pred] {datetime.now().isoformat()} -> {p_label} (phone_buf={len(phone_buffer)})"
-        )
+    if phone_win is not None:
+        phone_label, phone_p = predict_phone(phone_win)
+        print(f"[phone_pred] {datetime.now().isoformat()} -> {phone_label} (phone_buf={len(phone_buffer)})")
 
-    if watch_ready:
-        w_label, w_probs = predict_watch(watch_win)
-        watch_predictions.append(w_label)
-        watch_probs.append(w_probs)
-        print(
-            f"[watch_pred] {datetime.now().isoformat()} -> {w_label} (watch_buf={len(watch_buffer)})"
-        )
+    if watch_win is not None:
+        watch_label, watch_p = predict_watch(watch_win)
+        print(f"[watch_pred] {datetime.now().isoformat()} -> {watch_label} (watch_buf={len(watch_buffer)})")
 
-    if phone_ready and watch_ready:
-        f_label, f_probs = predict_fusion(phone_win, watch_win)
-        fusion_predictions.append(f_label)
-        fusion_probs.append(f_probs)
-        prediction_times.append(now)
-        print(
-            f"[fusion] {now.isoformat()} fusion_pred={f_label} (phone_buf={len(phone_buffer)} watch_buf={len(watch_buffer)})"
-        )
+    if phone_win is not None and watch_win is not None:
+        fusion_label, fusion_p = predict_fusion(phone_win, watch_win)
+        made_fusion = True
+        print(f"[fusion] {now.isoformat()} fusion_pred={fusion_label} (phone_buf={len(phone_buffer)} watch_buf={len(watch_buffer)})")
 
-    # set both_ready_flag once when both buffers reach WINDOW_SIZE
-    if len(phone_buffer) >= WINDOW_SIZE and len(watch_buffer) >= WINDOW_SIZE:
-        if not both_ready_flag:
-            both_ready_flag = True
-            last_both_ready_time = datetime.now()
-            print(
-                f"[info] BOTH buffers reached WINDOW_SIZE at {last_both_ready_time.isoformat()}"
-            )
-    else:
-        both_ready_flag = False
+    # Step 3: append results back under lock
+    with buffer_lock:
+        if phone_win is not None:
+            phone_predictions.append(phone_label)
+            phone_probs.append(phone_p)
+        if watch_win is not None:
+            watch_predictions.append(watch_label)
+            watch_probs.append(watch_p)
+        if made_fusion:
+            fusion_predictions.append(fusion_label)
+            fusion_probs.append(fusion_p)
+            prediction_times.append(now)
+
+        # Update both_ready_flag safely
+        if len(phone_buffer) >= WINDOW_SIZE and len(watch_buffer) >= WINDOW_SIZE:
+            if not both_ready_flag:
+                both_ready_flag = True
+                last_both_ready_time = datetime.now()
+                print(f"[info] BOTH buffers reached WINDOW_SIZE at {last_both_ready_time.isoformat()}")
+        else:
+            both_ready_flag = False
 
 
 # -----------------------
 # Plot helpers
 # -----------------------
 def create_sensor_graph(time_data, sensor_data, names, title, yaxis_label, colors):
-    """
-    Robust sensor graph creator:
-    - Aligns/trims each y series to the time_data length (avoids mismatched x/y).
-    - Converts datetime objects to ISO strings for JSON serialization.
-    """
-    data_traces = []
-    # ensure time_data is a list
-    time_list = list(time_data)
+    data = []
     for d, name, color in zip(sensor_data, names, colors):
+        # Align x/y lengths to avoid Plotly errors
+        x_list = list(time_data)
         y_list = list(d)
-        # align lengths: trim from front to match last points
-        if len(time_list) != len(y_list):
-            min_len = min(len(time_list), len(y_list))
+        if len(x_list) != len(y_list):
+            # trim the longer list to the shorter
+            min_len = min(len(x_list), len(y_list))
             if min_len == 0:
                 x_vals = []
                 y_vals = []
             else:
-                x_vals = time_list[-min_len:]
+                x_vals = x_list[-min_len:]
                 y_vals = y_list[-min_len:]
         else:
-            x_vals = time_list
+            x_vals = x_list
             y_vals = y_list
 
-        # convert datetimes to ISO strings (Plotly accepts these cleanly)
+        # convert datetimes to isoformat strings for safe serialization
         x_serial = [(t.isoformat() if hasattr(t, "isoformat") else t) for t in x_vals]
 
-        data_traces.append(
-            go.Scatter(x=x_serial, y=y_vals, name=name, line=dict(color=color, width=2))
-        )
+        data.append(go.Scatter(x=x_serial, y=y_vals, name=name, line=dict(color=color, width=2)))
 
     layout = go.Layout(
         title=dict(text=title, font=dict(size=14, color="#2c3e50")),
@@ -351,24 +388,24 @@ def create_sensor_graph(time_data, sensor_data, names, title, yaxis_label, color
         margin=dict(l=50, r=30, t=40, b=40),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
-    fig = {"data": data_traces, "layout": layout}
+    fig = {"data": data, "layout": layout}
     try:
-        if len(time_list) > 0:
-            # convert bounds to ISO strings too (if datetimes)
-            tmin = time_list[0]
-            tmax = time_list[-1]
-            tmin_s = tmin.isoformat() if hasattr(tmin, "isoformat") else tmin
-            tmax_s = tmax.isoformat() if hasattr(tmax, "isoformat") else tmax
-            fig["layout"]["xaxis"]["range"] = [tmin_s, tmax_s]
-        # compute y range from available aligned y values
-        all_values = [item for tr in data_traces for item in (tr["y"] or [])]
-        if all_values:
-            y_min = min(all_values)
-            y_max = max(all_values)
+        if len(time_data) > 0:
+            t0 = time_data[0]
+            t1 = time_data[-1]
+            t0s = t0.isoformat() if hasattr(t0, "isoformat") else t0
+            t1s = t1.isoformat() if hasattr(t1, "isoformat") else t1
+            fig["layout"]["xaxis"]["range"] = [t0s, t1s]
+        # determine y bounds from traces
+        all_vals = []
+        for tr in data:
+            all_vals.extend(tr["y"] if tr["y"] is not None else [])
+        if all_vals:
+            y_min = min(all_vals)
+            y_max = max(all_vals)
             y_margin = 1.0 if y_max - y_min == 0 else (y_max - y_min) * 0.1
             fig["layout"]["yaxis"]["range"] = [y_min - y_margin, y_max + y_margin]
     except Exception:
-        # be defensive: if anything fails here, return the base fig without ranges
         pass
     return fig
 
@@ -390,9 +427,7 @@ def create_prob_bars(probs, title):
     )
     fig.update_layout(
         title=dict(text=title, font=dict(size=12)),
-        yaxis=dict(
-            title="Probability", range=[0, 1], showgrid=True, gridcolor="#ecf0f1"
-        ),
+        yaxis=dict(title="Probability", range=[0, 1], showgrid=True, gridcolor="#ecf0f1"),
         xaxis=dict(title="Activity"),
         plot_bgcolor="white",
         paper_bgcolor="white",
@@ -402,15 +437,12 @@ def create_prob_bars(probs, title):
 
 
 def create_prediction_timeline():
-    # NOTE: fixed to ensure x (times) and y (preds) have identical lengths.
-    # Previous logic could produce mismatched lengths and cause plot errors / stop updates.
     if len(prediction_times) == 0:
         return go.Figure()
     activity_to_num = {label: i for i, label in enumerate(ACTIVITY_LABELS)}
     last_times = list(prediction_times)[-PREDICTION_PLOT_MAX:]
     n = len(last_times)
 
-    # take last n predictions for each source and left-pad with a sentinel (-1) if shorter
     def aligned_numbers(pred_deque):
         preds = list(pred_deque)[-n:]
         if len(preds) < n:
@@ -422,37 +454,13 @@ def create_prediction_timeline():
     watch_nums = aligned_numbers(watch_predictions)
     fusion_nums = aligned_numbers(fusion_predictions)
 
-    # convert times to ISO strings for safety
     x_serial = [(t.isoformat() if hasattr(t, "isoformat") else t) for t in last_times]
 
     fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=x_serial,
-            y=phone_nums,
-            name="Phone",
-            mode="lines+markers",
-            line=dict(color="#3498db", width=2),
-        )
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=x_serial,
-            y=watch_nums,
-            name="Watch",
-            mode="lines+markers",
-            line=dict(color="#e74c3c", width=2),
-        )
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=x_serial,
-            y=fusion_nums,
-            name="Fusion",
-            mode="lines+markers",
-            line=dict(color="#27ae60", width=2),
-        )
-    )
+    fig.add_trace(go.Scatter(x=x_serial, y=phone_nums, name="Phone", mode="lines+markers", line=dict(color="#3498db", width=2)))
+    fig.add_trace(go.Scatter(x=x_serial, y=watch_nums, name="Watch", mode="lines+markers", line=dict(color="#e74c3c", width=2)))
+    fig.add_trace(go.Scatter(x=x_serial, y=fusion_nums, name="Fusion", mode="lines+markers", line=dict(color="#27ae60", width=2)))
+
     fig.update_layout(
         title="Prediction Timeline",
         xaxis=dict(title="Time"),
@@ -498,13 +506,13 @@ def data():
 
     time_tolerance = timedelta(milliseconds=200)
 
+    call_predict = False  # set True inside lock if we should run make_predictions afterwards
+
     with buffer_lock:
         for d in samples:
             try:
                 # store raw event for debug endpoint & quick inspection
-                recent_events.append(
-                    {"received_at": datetime.now().isoformat(), "raw": d}
-                )
+                recent_events.append({"received_at": datetime.now().isoformat(), "raw": d})
                 device_raw = d.get("device", None)
                 recent_device_strings.append(str(device_raw))
 
@@ -541,31 +549,17 @@ def data():
                 else:
                     role = identify_device(str(device_raw))
 
-                print(
-                    f"[IDENTIFY] name='{name_raw}' device='{device_raw}' -> role='{role}'"
-                )
+                print(f"[IDENTIFY] name='{name_raw}' device='{device_raw}' -> role='{role}'")
 
                 # handle wrist-motion (watch)
                 if "wrist" in name:
                     vals = d.get("values", {})
-                    gx = float(
-                        vals.get("rotationRateX", vals.get("rotationRate_x", 0.0))
-                    )
-                    gy = float(
-                        vals.get("rotationRateY", vals.get("rotationRate_y", 0.0))
-                    )
-                    gz = float(
-                        vals.get("rotationRateZ", vals.get("rotationRate_z", 0.0))
-                    )
-                    ax = float(
-                        vals.get("accelerationX", vals.get("acceleration_x", 0.0))
-                    )
-                    ay = float(
-                        vals.get("accelerationY", vals.get("acceleration_y", 0.0))
-                    )
-                    az = float(
-                        vals.get("accelerationZ", vals.get("acceleration_z", 0.0))
-                    )
+                    gx = float(vals.get("rotationRateX", vals.get("rotationRate_x", 0.0)))
+                    gy = float(vals.get("rotationRateY", vals.get("rotationRate_y", 0.0)))
+                    gz = float(vals.get("rotationRateZ", vals.get("rotationRate_z", 0.0)))
+                    ax = float(vals.get("accelerationX", vals.get("acceleration_x", 0.0)))
+                    ay = float(vals.get("accelerationY", vals.get("acceleration_y", 0.0)))
+                    az = float(vals.get("accelerationZ", vals.get("acceleration_z", 0.0)))
 
                     # append to plotting series
                     time_accel.append(ts)
@@ -578,12 +572,8 @@ def data():
                     gyro_z.append(gz)
 
                     # caches
-                    accel_cache["watch"].append(
-                        {"ax": ax, "ay": ay, "az": az, "timestamp": ts}
-                    )
-                    gyro_cache["watch"].append(
-                        {"gx": gx, "gy": gy, "gz": gz, "timestamp": ts}
-                    )
+                    accel_cache["watch"].append({"ax": ax, "ay": ay, "az": az, "timestamp": ts})
+                    gyro_cache["watch"].append({"gx": gx, "gy": gy, "gz": gz, "timestamp": ts})
 
                     # create sample if both present
                     if len(accel_cache["watch"]) > 0 and len(gyro_cache["watch"]) > 0:
@@ -604,48 +594,26 @@ def data():
                         if sample_counts["watch"] % 50 == 0:
                             print(f"[append] watch_buffer size now {len(watch_buffer)}")
                         if sample_counts["watch"] % STEP_SIZE_RT == 0:
-                            make_predictions()
+                            call_predict = True
                     else:
-                        print(
-                            "[debug] wrist-motion: updated caches; waiting for counterpart to pair."
-                        )
+                        print("[debug] wrist-motion: updated caches; waiting for counterpart to pair.")
 
                 # phone accelerometer
                 elif name == "accelerometer":
                     vals = d.get("values", {})
-                    ax = float(
-                        vals.get(
-                            "x",
-                            vals.get("accelerationX", vals.get("acceleration_x", 0.0)),
-                        )
-                    )
-                    ay = float(
-                        vals.get(
-                            "y",
-                            vals.get("accelerationY", vals.get("acceleration_y", 0.0)),
-                        )
-                    )
-                    az = float(
-                        vals.get(
-                            "z",
-                            vals.get("accelerationZ", vals.get("acceleration_z", 0.0)),
-                        )
-                    )
+                    ax = float(vals.get("x", vals.get("accelerationX", vals.get("acceleration_x", 0.0))))
+                    ay = float(vals.get("y", vals.get("accelerationY", vals.get("acceleration_y", 0.0))))
+                    az = float(vals.get("z", vals.get("accelerationZ", vals.get("acceleration_z", 0.0))))
 
                     time_accel.append(ts)
                     accel_x.append(ax)
                     accel_y.append(ay)
                     accel_z.append(az)
-                    accel_cache["phone"].append(
-                        {"ax": ax, "ay": ay, "az": az, "timestamp": ts}
-                    )
+                    accel_cache["phone"].append({"ax": ax, "ay": ay, "az": az, "timestamp": ts})
 
                     paired_gyro = None
                     for g in reversed(gyro_cache["phone"]):
-                        if (
-                            abs((ts - g["timestamp"]).total_seconds())
-                            <= time_tolerance.total_seconds()
-                        ):
+                        if (abs((ts - g["timestamp"]).total_seconds()) <= time_tolerance.total_seconds()):
                             paired_gyro = g
                             break
                     if paired_gyro is None and len(gyro_cache["phone"]) > 0:
@@ -666,39 +634,26 @@ def data():
                         if sample_counts["phone"] % 50 == 0:
                             print(f"[append] phone_buffer size now {len(phone_buffer)}")
                         if sample_counts["phone"] % STEP_SIZE_RT == 0:
-                            make_predictions()
+                            call_predict = True
                     else:
-                        print(
-                            "[debug] accel(phone): cached accel; waiting for gyro to pair."
-                        )
+                        print("[debug] accel(phone): cached accel; waiting for gyro to pair.")
 
                 # phone gyroscope
                 elif name == "gyroscope":
                     vals = d.get("values", {})
-                    gx = float(
-                        vals.get("x", vals.get("rotationRateX", vals.get("gx", 0.0)))
-                    )
-                    gy = float(
-                        vals.get("y", vals.get("rotationRateY", vals.get("gy", 0.0)))
-                    )
-                    gz = float(
-                        vals.get("z", vals.get("rotationRateZ", vals.get("gz", 0.0)))
-                    )
+                    gx = float(vals.get("x", vals.get("rotationRateX", vals.get("gx", 0.0))))
+                    gy = float(vals.get("y", vals.get("rotationRateY", vals.get("gy", 0.0))))
+                    gz = float(vals.get("z", vals.get("rotationRateZ", vals.get("gz", 0.0))))
 
                     time_gyro.append(ts)
                     gyro_x.append(gx)
                     gyro_y.append(gy)
                     gyro_z.append(gz)
-                    gyro_cache["phone"].append(
-                        {"gx": gx, "gy": gy, "gz": gz, "timestamp": ts}
-                    )
+                    gyro_cache["phone"].append({"gx": gx, "gy": gy, "gz": gz, "timestamp": ts})
 
                     paired_accel = None
                     for a in reversed(accel_cache["phone"]):
-                        if (
-                            abs((ts - a["timestamp"]).total_seconds())
-                            <= time_tolerance.total_seconds()
-                        ):
+                        if (abs((ts - a["timestamp"]).total_seconds()) <= time_tolerance.total_seconds()):
                             paired_accel = a
                             break
                     if paired_accel is None and len(accel_cache["phone"]) > 0:
@@ -719,18 +674,14 @@ def data():
                         if sample_counts["phone"] % 50 == 0:
                             print(f"[append] phone_buffer size now {len(phone_buffer)}")
                         if sample_counts["phone"] % STEP_SIZE_RT == 0:
-                            make_predictions()
+                            call_predict = True
                     else:
-                        print(
-                            "[debug] gyro(phone): cached gyro; waiting for accel to pair."
-                        )
+                        print("[debug] gyro(phone): cached gyro; waiting for accel to pair.")
 
                 # fallback: if event contains x,y,z treat as phone accel (best-effort)
                 else:
                     vals = d.get("values", {})
-                    if isinstance(vals, dict) and (
-                        "x" in vals and "y" in vals and "z" in vals
-                    ):
+                    if isinstance(vals, dict) and ("x" in vals and "y" in vals and "z" in vals):
                         try:
                             ax = float(vals.get("x", 0.0))
                             ay = float(vals.get("y", 0.0))
@@ -739,18 +690,12 @@ def data():
                             accel_x.append(ax)
                             accel_y.append(ay)
                             accel_z.append(az)
-                            accel_cache["phone"].append(
-                                {"ax": ax, "ay": ay, "az": az, "timestamp": ts}
-                            )
-                            print(
-                                "[debug] fallback: treated unknown event with x,y,z as phone accel."
-                            )
+                            accel_cache["phone"].append({"ax": ax, "ay": ay, "az": az, "timestamp": ts})
+                            print("[debug] fallback: treated unknown event with x,y,z as phone accel.")
                         except Exception:
                             print("[debug] fallback: could not parse numeric x,y,z.")
                     else:
-                        print(
-                            f"[info] Unknown sensor name '{name_raw}' from device '{device_raw}' — skipping."
-                        )
+                        print(f"[info] Unknown sensor name '{name_raw}' from device '{device_raw}' — skipping.")
 
             except Exception as ex:
                 print("Error processing incoming sample:", ex)
@@ -767,6 +712,14 @@ def data():
                 f"accel_cache_w={len(accel_cache['watch'])} gyro_cache_w={len(gyro_cache['watch'])}"
             )
 
+    # End of with buffer_lock: call predictions (outside lock) if we flagged it.
+    if call_predict:
+        try:
+            make_predictions()
+        except Exception as e:
+            print("Error during make_predictions():", e)
+            traceback.print_exc()
+
     # Always return 200 OK to keep Sensor Logger streaming
     return "ok", 200
 
@@ -779,15 +732,9 @@ def debug_info():
     with buffer_lock:
         phone_len = len(phone_buffer)
         watch_len = len(watch_buffer)
-        last_phone_ts = (
-            phone_buffer[-1]["timestamp"].isoformat() if phone_len > 0 else None
-        )
-        last_watch_ts = (
-            watch_buffer[-1]["timestamp"].isoformat() if watch_len > 0 else None
-        )
-        last_pred_time = (
-            prediction_times[-1].isoformat() if len(prediction_times) > 0 else None
-        )
+        last_phone_ts = (phone_buffer[-1]["timestamp"].isoformat() if phone_len > 0 else None)
+        last_watch_ts = (watch_buffer[-1]["timestamp"].isoformat() if watch_len > 0 else None)
+        last_pred_time = (prediction_times[-1].isoformat() if len(prediction_times) > 0 else None)
         recent_dev_list = list(recent_device_strings)[-50:]
         recent_ev = list(recent_events)[-50:]
         model_status = {
@@ -807,11 +754,7 @@ def debug_info():
             "last_prediction_time": last_pred_time,
             "sample_counts": sample_counts.copy(),
             "both_ready_flag": both_ready_flag,
-            "last_both_ready_time": (
-                last_both_ready_time.isoformat()
-                if last_both_ready_time is not None
-                else None
-            ),
+            "last_both_ready_time": (last_both_ready_time.isoformat() if last_both_ready_time is not None else None),
             "recent_device_strings": recent_dev_list,
             "recent_events_count": len(recent_ev),
             "recent_events_sample": recent_ev[-10:],
@@ -1043,60 +986,48 @@ app.layout = html.Div(
     ],
     Input("counter", "n_intervals"),
 )
+
 def update_dashboard(_counter):
-    """
-    Wrapped in try/except to avoid a single error stopping periodic updates.
-    On exception, we log and return safe empty/sparse figures so the UI keeps refreshing.
-    """
     try:
+        # CRITICAL: Minimize lock time - only copy data, don't process
         with buffer_lock:
             phone_samples = len(phone_buffer)
             watch_samples = len(watch_buffer)
-            last_phone_pred = (
-                phone_predictions[-1] if len(phone_predictions) > 0 else "---"
-            )
-            last_watch_pred = (
-                watch_predictions[-1] if len(watch_predictions) > 0 else "---"
-            )
+            last_phone_pred = phone_predictions[-1] if len(phone_predictions) > 0 else "---"
+            last_watch_pred = watch_predictions[-1] if len(watch_predictions) > 0 else "---"
             last_fusion_pred = (
                 fusion_predictions[-1] if len(fusion_predictions) > 0 else "---"
             )
             last_phone_probs = (
-                phone_probs[-1]
-                if len(phone_probs) > 0
-                else np.zeros(len(ACTIVITY_LABELS))
-            )
+                phone_probs[-1] if len(phone_probs) > 0 else np.zeros(len(ACTIVITY_LABELS))
+            ).copy()
             last_watch_probs = (
-                watch_probs[-1]
-                if len(watch_probs) > 0
-                else np.zeros(len(ACTIVITY_LABELS))
-            )
+                watch_probs[-1] if len(watch_probs) > 0 else np.zeros(len(ACTIVITY_LABELS))
+            ).copy()
             last_fusion_probs = (
                 fusion_probs[-1]
                 if len(fusion_probs) > 0
                 else np.zeros(len(ACTIVITY_LABELS))
-            )
+            ).copy()
 
-            # Plot only the last PLOT_MAX_POINTS samples
-            slice_tail = None if PLOT_MAX_POINTS is None else -PLOT_MAX_POINTS
-            ta = list(time_accel)[slice_tail:]
-            ax = list(accel_x)[slice_tail:]
-            ay = list(accel_y)[slice_tail:]
-            az = list(accel_z)[slice_tail:]
-            tg = list(time_gyro)[slice_tail:]
-            gx = list(gyro_x)[slice_tail:]
-            gy = list(gyro_y)[slice_tail:]
-            gz = list(gyro_z)[slice_tail:]
-
+            # Copy only last PLOT_MAX_POINTS to avoid massive lists
+            ta = list(time_accel)[-PLOT_MAX_POINTS:]
+            ax = list(accel_x)[-PLOT_MAX_POINTS:]
+            ay = list(accel_y)[-PLOT_MAX_POINTS:]
+            az = list(accel_z)[-PLOT_MAX_POINTS:]
+            tg = list(time_gyro)[-PLOT_MAX_POINTS:]
+            gx = list(gyro_x)[-PLOT_MAX_POINTS:]
+            gy = list(gyro_y)[-PLOT_MAX_POINTS:]
+            gz = list(gyro_z)[-PLOT_MAX_POINTS:]
+        
+        # NOW graph creation happens OUTSIDE the lock
         status = html.Div(
             [
                 html.Span("📱 Phone: ", style={"fontWeight": "bold"}),
                 html.Span(
                     f"{phone_samples}/{WINDOW_SIZE} samples",
                     style={
-                        "color": (
-                            "#27ae60" if phone_samples >= WINDOW_SIZE else "#e74c3c"
-                        )
+                        "color": "#27ae60" if phone_samples >= WINDOW_SIZE else "#e74c3c"
                     },
                 ),
                 html.Span(" | ", style={"margin": "0 12px"}),
@@ -1104,9 +1035,7 @@ def update_dashboard(_counter):
                 html.Span(
                     f"{watch_samples}/{WINDOW_SIZE} samples",
                     style={
-                        "color": (
-                            "#27ae60" if watch_samples >= WINDOW_SIZE else "#e74c3c"
-                        )
+                        "color": "#27ae60" if watch_samples >= WINDOW_SIZE else "#e74c3c"
                     },
                 ),
                 html.Span(" | ", style={"margin": "0 12px"}),
@@ -1151,43 +1080,17 @@ def update_dashboard(_counter):
             fusion_prob_fig,
             timeline_fig,
         )
-
+    
     except Exception as e:
-        # Log full traceback to the server console but return safe defaults so the UI keeps refreshing.
-        print("[error] exception in update_dashboard:", e)
-        traceback.print_exc()
-
-        safe_empty_fig = {
-            "data": [],
-            "layout": {"title": {"text": "Error (see server logs)"}},
-        }
-        safe_prob = create_prob_bars(np.zeros(len(ACTIVITY_LABELS)), "No Data")
-        safe_status = html.Div(
-            [
-                html.Span("📱 Phone: ", style={"fontWeight": "bold"}),
-                html.Span("0/150 samples", style={"color": "#e74c3c"}),
-                html.Span(" | ", style={"margin": "0 12px"}),
-                html.Span("⌚ Watch: ", style={"fontWeight": "bold"}),
-                html.Span("0/150 samples", style={"color": "#e74c3c"}),
-                html.Span(" | ", style={"margin": "0 12px"}),
-                html.Span(f"Server: {local_ip}:8000", style={"fontWeight": "bold"}),
-            ],
-            style={"fontSize": "16px", "padding": "8px"},
-        )
-
+        print(f"[ERROR] Dashboard callback failed: {e}")
+        # Return empty/default values to keep dashboard responsive
+        empty_fig = go.Figure()
+        empty_fig.update_layout(title="Error loading data")
         return (
-            safe_status,
-            safe_empty_fig,
-            safe_empty_fig,
-            "---",
-            "---",
-            "---",
-            safe_prob,
-            safe_prob,
-            safe_prob,
-            safe_empty_fig,
+            html.Div("Error updating dashboard"),
+            empty_fig, empty_fig, "---", "---", "---",
+            empty_fig, empty_fig, empty_fig, empty_fig
         )
-
 
 # -----------------------
 # Run server
@@ -1205,9 +1108,7 @@ if __name__ == "__main__":
     print("\nConfigure Sensor Logger:")
     print("  1. Set recording mode to 'Push to Server'")
     print(f"  2. Enter URL: http://{local_ip}:8000/data")
-    print(
-        "  3. Enable Accelerometer and Gyroscope sensors (watch may send 'wrist motion' events too)"
-    )
+    print("  3. Enable Accelerometer and Gyroscope sensors (watch may send 'wrist motion' events too)")
     print("  4. Set recording frequency to 50 Hz")
     print("  5. Start recording on both phone and watch")
     print("=" * 70 + "\n")
