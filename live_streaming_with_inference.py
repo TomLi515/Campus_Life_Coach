@@ -64,8 +64,9 @@ phone_buffer = deque(
 )  # each element: dict with ax,ay,az,gx,gy,gz,timestamp
 watch_buffer = deque(maxlen=MAX_DATA_POINTS)
 
-# Per-role accel cache to pair gyro -> accel reliably (store recent accels for each role)
+# Per-role accel/gyro caches to pair reliably (store recent)
 accel_cache = {"phone": deque(maxlen=2000), "watch": deque(maxlen=2000)}
+gyro_cache = {"phone": deque(maxlen=2000), "watch": deque(maxlen=2000)}
 
 # simple sample counters used to trigger inference cadence
 sample_counts = {"phone": 0, "watch": 0}
@@ -80,7 +81,14 @@ phone_probs = deque(maxlen=500)
 watch_probs = deque(maxlen=500)
 fusion_probs = deque(maxlen=500)
 
+# Recent raw event storage for debugging (visible via /debug)
+recent_events = deque(maxlen=200)  # store raw incoming events (dicts)
+recent_device_strings = deque(maxlen=200)  # store recent device strings seen
+
+# State flags
 frame_count = 0
+both_ready_flag = False  # indicates when both buffers reached WINDOW_SIZE previously
+last_both_ready_time = None
 
 # -----------------------
 # Models (placeholders / load)
@@ -89,31 +97,25 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
 MODEL_DIR = Path("finetune/models/dashboard_models")
+# user replaced placeholders earlier with filenames; treat them as optional strings
 phone_model = "phone_only_classifier.pth"
 watch_model = "watch_only_classifier.pth"
 fusion_model = "fusion_classifier.pth"
 
 
-def try_load_ckpt(path):
-    try:
-        if path.exists():
-            ckpt = torch.load(path, map_location=device)
-            return ckpt
-    except Exception as e:
-        print(f"Error loading {path}: {e}")
-    return None
+# Helper: determine whether a model variable contains a loaded nn.Module
+def is_model_loaded(m):
+    return isinstance(m, torch.nn.Module)
 
 
-# Try loading checkpoints ()
-_ = try_load_ckpt(MODEL_DIR / "phone_only_classifier.pth")
-_ = try_load_ckpt(MODEL_DIR / "watch_only_classifier.pth")
-_ = try_load_ckpt(MODEL_DIR / "fusion_classifier.pth")
+# (We won't attempt heavy model auto-loading here — safe fallback used if not loaded)
 
 
 # -----------------------
 # Utilities
 # -----------------------
 def identify_device(device_string: str):
+    """Robust heuristics to classify device string as 'phone' or 'watch'."""
     if not device_string:
         return "phone"
     s = device_string.lower()
@@ -128,17 +130,26 @@ def identify_device(device_string: str):
         "xr",
         "pro",
         "oneplus",
+        "sm-g",  # Samsung phone codes
+        "sm-g975",  # example
+        "redmi",
+        "xiaomi",
+        "mi",
     ]
     watch_keywords = [
         "watch",
         "wrist",
         "fitbit",
         "applewatch",
+        "apple watch",
         "garmin",
         "mi band",
         "wear",
         "galaxywatch",
         "tizen",
+        "sm-r",  # Samsung watch codes
+        "pixel_watch",
+        "pixel-watch",
     ]
     for kw in watch_keywords:
         if kw in s:
@@ -146,6 +157,11 @@ def identify_device(device_string: str):
     for kw in phone_keywords:
         if kw in s:
             return "phone"
+    # heuristic: SM-R => watch, SM-G => phone
+    if "sm-r" in s:
+        return "watch"
+    if "sm-g" in s:
+        return "phone"
     # fallback
     return "phone"
 
@@ -174,11 +190,11 @@ def create_window_from_buffer(buffer):
     return window
 
 
-# Prediction functions (use placeholders if model not loaded)
+# Prediction functions: treat non-loaded models as placeholder (Dirichlet)
 def predict_phone(window):
     if window is None:
         return "---", np.zeros(len(ACTIVITY_LABELS))
-    if phone_model is None:
+    if not is_model_loaded(phone_model):
         probs = np.random.dirichlet(np.ones(len(ACTIVITY_LABELS)))
         return ACTIVITY_LABELS[np.argmax(probs)], probs
     try:
@@ -200,7 +216,7 @@ def predict_phone(window):
 def predict_watch(window):
     if window is None:
         return "---", np.zeros(len(ACTIVITY_LABELS))
-    if watch_model is None:
+    if not is_model_loaded(watch_model):
         probs = np.random.dirichlet(np.ones(len(ACTIVITY_LABELS)))
         return ACTIVITY_LABELS[np.argmax(probs)], probs
     try:
@@ -222,7 +238,7 @@ def predict_watch(window):
 def predict_fusion(phone_window, watch_window):
     if phone_window is None or watch_window is None:
         return "---", np.zeros(len(ACTIVITY_LABELS))
-    if fusion_model is None:
+    if not is_model_loaded(fusion_model):
         probs = np.random.dirichlet(np.ones(len(ACTIVITY_LABELS)))
         return ACTIVITY_LABELS[np.argmax(probs)], probs
     try:
@@ -251,23 +267,42 @@ def make_predictions():
     """Make predictions for phone/watch/fusion if windows available.
     Called inside buffer_lock to avoid races.
     """
+    global both_ready_flag, last_both_ready_time
     now = datetime.now()
     phone_win = create_window_from_buffer(phone_buffer)
     watch_win = create_window_from_buffer(watch_buffer)
 
-    if phone_win is not None:
+    phone_ready = phone_win is not None
+    watch_ready = watch_win is not None
+
+    if phone_ready:
         p_label, p_probs = predict_phone(phone_win)
         phone_predictions.append(p_label)
         phone_probs.append(p_probs)
-    if watch_win is not None:
+    if watch_ready:
         w_label, w_probs = predict_watch(watch_win)
         watch_predictions.append(w_label)
         watch_probs.append(w_probs)
-    if phone_win is not None and watch_win is not None:
+    if phone_ready and watch_ready:
         f_label, f_probs = predict_fusion(phone_win, watch_win)
         fusion_predictions.append(f_label)
         fusion_probs.append(f_probs)
         prediction_times.append(now)
+        # debug print
+        print(
+            f"[fusion] {now.isoformat()} fusion_pred={f_label} (phone_ready={len(phone_buffer)} watch_ready={len(watch_buffer)})"
+        )
+
+    # Update both_ready flag & print once when condition changes to True
+    if len(phone_buffer) >= WINDOW_SIZE and len(watch_buffer) >= WINDOW_SIZE:
+        if not both_ready_flag:
+            both_ready_flag = True
+            last_both_ready_time = datetime.now()
+            print(
+                f"[info] BOTH buffers reached WINDOW_SIZE at {last_both_ready_time.isoformat()} -> fusion predictions will run when new windows available."
+            )
+    else:
+        both_ready_flag = False
 
 
 # -----------------------
@@ -390,11 +425,8 @@ def create_prediction_timeline():
 
 
 # -----------------------
-# Data ingestion endpoint
+# Data ingestion endpoint (with verbose debug)
 # -----------------------
-gyro_cache = {"phone": deque(maxlen=2000), "watch": deque(maxlen=2000)}
-
-
 @server.route("/data", methods=["POST"])
 def data():
     """
@@ -422,33 +454,39 @@ def data():
     with buffer_lock:
         for d in samples:
             try:
+                # record raw event for debug endpoint
+                recent_events.append(
+                    {"received_at": datetime.now().isoformat(), "raw": d}
+                )
+                device_raw = d.get("device", None)
+                recent_device_strings.append(str(device_raw))
+
                 # Debug: print keys and device strings to help identify mis-named devices
-                # (This will help you see what the watch actually sends.)
-                if "device" in d or "name" in d:
-                    print(
-                        "[incoming sample keys] device_raw:",
-                        d.get("device", None),
-                        "name:",
-                        d.get("name", None),
-                        "keys:",
-                        list(d.keys()),
-                    )
+                print("---------- INCOMING EVENT ----------")
+                print("Raw event:", d)
+                print("device:", device_raw)
+                print("name:", d.get("name"))
+                print("time:", d.get("time"))
+                print("values:", d.get("values"))
+                print("------------------------------------")
 
                 # timestamp handling (accept nanoseconds or seconds)
                 ts_ns = d.get("time", None)
                 if ts_ns is None:
                     ts = datetime.now()
                 else:
-                    # if value looks like nanoseconds
-                    if ts_ns > 1e12:
-                        ts = datetime.fromtimestamp(ts_ns / 1_000_000_000)
-                    else:
-                        # fallback treat as seconds
-                        ts = datetime.fromtimestamp(ts_ns)
+                    # if value looks like nanoseconds ( > 1e12 roughly)
+                    try:
+                        if ts_ns > 1e12:
+                            ts = datetime.fromtimestamp(ts_ns / 1_000_000_000)
+                        else:
+                            ts = datetime.fromtimestamp(ts_ns)
+                    except Exception:
+                        ts = datetime.now()
 
                 # determine role (phone/watch)
-                device_raw = str(d.get("device", "unknown"))
-                role = identify_device(device_raw)  # 'phone' or 'watch'
+                role = identify_device(str(device_raw))
+                print(f"[IDENTIFY] device_string='{device_raw}' -> role='{role}'")
 
                 name = d.get("name", "").lower()
 
@@ -472,7 +510,6 @@ def data():
                     # Try to form a sample immediately if there is a recent gyro nearby
                     paired_gyro = None
                     for g in reversed(gyro_cache[role]):
-                        # prefer gyro <= accel_ts, but accept slightly newer if close enough
                         if (
                             abs((ts - g["timestamp"]).total_seconds())
                             <= time_tolerance.total_seconds()
@@ -504,8 +541,10 @@ def data():
                             if sample_counts["watch"] % STEP_SIZE_RT == 0:
                                 make_predictions()
                     else:
-                        # No gyro yet to pair — that's fine, an accel-only sample is still kept in accel_cache
-                        pass
+                        # No gyro yet to pair — that's fine, an accel-only sample is kept in accel_cache
+                        print(
+                            f"[debug] accel-only event for {role} queued (no gyro yet)."
+                        )
 
                 # ----- Gyroscope event -----
                 elif name == "gyroscope":
@@ -559,7 +598,9 @@ def data():
                                 make_predictions()
                     else:
                         # no accel to pair with yet; we keep gyro in gyro_cache
-                        pass
+                        print(
+                            f"[debug] gyro-only event for {role} queued (no accel yet)."
+                        )
 
                 else:
                     # Unknown sensor type — log for debugging, but don't crash.
@@ -574,13 +615,73 @@ def data():
 
         frame_count += 1
 
+        # print periodic summary to help debugging (every 50 frames)
+        if frame_count % 50 == 0:
+            print(
+                f"[summary @ frame {frame_count}] phone_buffer={len(phone_buffer)} watch_buffer={len(watch_buffer)} "
+                f"accel_cache(phone)={len(accel_cache['phone'])} gyro_cache(phone)={len(gyro_cache['phone'])} "
+                f"accel_cache(watch)={len(accel_cache['watch'])} gyro_cache(watch)={len(gyro_cache['watch'])}"
+            )
+
     # Always return 200 OK to keep Sensor Logger from stopping the stream
     return "ok", 200
 
 
+# -----------------------
+# Debug endpoint (inspect internal state)
+# -----------------------
+@server.route("/debug", methods=["GET"])
+def debug_info():
+    with buffer_lock:
+        phone_len = len(phone_buffer)
+        watch_len = len(watch_buffer)
+        last_phone_ts = (
+            phone_buffer[-1]["timestamp"].isoformat() if phone_len > 0 else None
+        )
+        last_watch_ts = (
+            watch_buffer[-1]["timestamp"].isoformat() if watch_len > 0 else None
+        )
+        last_pred_time = (
+            prediction_times[-1].isoformat() if len(prediction_times) > 0 else None
+        )
+        recent_dev_list = list(recent_device_strings)[-50:]
+        recent_ev = list(recent_events)[-50:]
+
+        model_status = {
+            "phone_loaded": is_model_loaded(phone_model),
+            "watch_loaded": is_model_loaded(watch_model),
+            "fusion_loaded": is_model_loaded(fusion_model),
+            "phone_model_var": str(type(phone_model)),
+            "watch_model_var": str(type(watch_model)),
+            "fusion_model_var": str(type(fusion_model)),
+        }
+
+        resp = {
+            "timestamp": datetime.now().isoformat(),
+            "phone_buffer_len": phone_len,
+            "watch_buffer_len": watch_len,
+            "last_phone_sample_ts": last_phone_ts,
+            "last_watch_sample_ts": last_watch_ts,
+            "last_prediction_time": last_pred_time,
+            "sample_counts": sample_counts.copy(),
+            "both_ready_flag": both_ready_flag,
+            "last_both_ready_time": (
+                last_both_ready_time.isoformat()
+                if last_both_ready_time is not None
+                else None
+            ),
+            "recent_device_strings": recent_dev_list,
+            "recent_events_count": len(recent_ev),
+            "recent_events_sample": recent_ev[-10:],
+            "model_status": model_status,
+        }
+    # Flask will jsonify the dict response
+    return resp
+
+
 @server.route("/", methods=["GET"])
 def index():
-    return "IMU Activity Recognition Dashboard running. POST data to /data endpoint."
+    return "IMU Activity Recognition Dashboard (debug) running. POST data to /data endpoint. Visit /debug for state."
 
 
 # -----------------------
@@ -591,7 +692,7 @@ app.layout = html.Div(
         html.Div(
             [
                 html.H1(
-                    "🏃 Real-Time IMU Activity Recognition",
+                    "🏃 Real-Time IMU Activity Recognition (debug)",
                     style={
                         "textAlign": "center",
                         "color": "#2c3e50",
@@ -599,7 +700,7 @@ app.layout = html.Div(
                     },
                 ),
                 html.P(
-                    "Streaming sensor data from phone and watch with three-model prediction",
+                    "Streaming sensor data from phone and watch with three-model prediction — debug enabled",
                     style={
                         "textAlign": "center",
                         "color": "#7f8c8d",
@@ -862,7 +963,7 @@ def update_dashboard(_counter):
 # -----------------------
 if __name__ == "__main__":
     print("\n" + "=" * 70)
-    print("STARTING IMU ACTIVITY RECOGNITION DASHBOARD")
+    print("STARTING IMU ACTIVITY RECOGNITION DASHBOARD (debug mode)")
     print("=" * 70)
     print(f"Dashboard URL: http://{local_ip}:8000")
     print(f"Sensor Logger POST endpoint: http://{local_ip}:8000/data")
