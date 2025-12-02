@@ -13,6 +13,7 @@ import numpy as np
 import torch
 from pathlib import Path
 from threading import Lock
+import traceback
 
 # -----------------------
 # Basic config
@@ -311,13 +312,36 @@ def make_predictions():
 # Plot helpers
 # -----------------------
 def create_sensor_graph(time_data, sensor_data, names, title, yaxis_label, colors):
-    data = []
+    """
+    Robust sensor graph creator:
+    - Aligns/trims each y series to the time_data length (avoids mismatched x/y).
+    - Converts datetime objects to ISO strings for JSON serialization.
+    """
+    data_traces = []
+    # ensure time_data is a list
+    time_list = list(time_data)
     for d, name, color in zip(sensor_data, names, colors):
-        data.append(
-            go.Scatter(
-                x=list(time_data), y=list(d), name=name, line=dict(color=color, width=2)
-            )
+        y_list = list(d)
+        # align lengths: trim from front to match last points
+        if len(time_list) != len(y_list):
+            min_len = min(len(time_list), len(y_list))
+            if min_len == 0:
+                x_vals = []
+                y_vals = []
+            else:
+                x_vals = time_list[-min_len:]
+                y_vals = y_list[-min_len:]
+        else:
+            x_vals = time_list
+            y_vals = y_list
+
+        # convert datetimes to ISO strings (Plotly accepts these cleanly)
+        x_serial = [(t.isoformat() if hasattr(t, "isoformat") else t) for t in x_vals]
+
+        data_traces.append(
+            go.Scatter(x=x_serial, y=y_vals, name=name, line=dict(color=color, width=2))
         )
+
     layout = go.Layout(
         title=dict(text=title, font=dict(size=14, color="#2c3e50")),
         xaxis=dict(title="Time", showgrid=True, gridcolor="#ecf0f1", type="date"),
@@ -327,17 +351,24 @@ def create_sensor_graph(time_data, sensor_data, names, title, yaxis_label, color
         margin=dict(l=50, r=30, t=40, b=40),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
-    fig = {"data": data, "layout": layout}
+    fig = {"data": data_traces, "layout": layout}
     try:
-        if len(time_data) > 0:
-            fig["layout"]["xaxis"]["range"] = [min(time_data), max(time_data)]
-        all_values = [item for sublist in sensor_data for item in sublist]
+        if len(time_list) > 0:
+            # convert bounds to ISO strings too (if datetimes)
+            tmin = time_list[0]
+            tmax = time_list[-1]
+            tmin_s = tmin.isoformat() if hasattr(tmin, "isoformat") else tmin
+            tmax_s = tmax.isoformat() if hasattr(tmax, "isoformat") else tmax
+            fig["layout"]["xaxis"]["range"] = [tmin_s, tmax_s]
+        # compute y range from available aligned y values
+        all_values = [item for tr in data_traces for item in (tr["y"] or [])]
         if all_values:
             y_min = min(all_values)
             y_max = max(all_values)
             y_margin = 1.0 if y_max - y_min == 0 else (y_max - y_min) * 0.1
             fig["layout"]["yaxis"]["range"] = [y_min - y_margin, y_max + y_margin]
     except Exception:
+        # be defensive: if anything fails here, return the base fig without ranges
         pass
     return fig
 
@@ -371,26 +402,33 @@ def create_prob_bars(probs, title):
 
 
 def create_prediction_timeline():
+    # NOTE: fixed to ensure x (times) and y (preds) have identical lengths.
+    # Previous logic could produce mismatched lengths and cause plot errors / stop updates.
     if len(prediction_times) == 0:
         return go.Figure()
     activity_to_num = {label: i for i, label in enumerate(ACTIVITY_LABELS)}
     last_times = list(prediction_times)[-PREDICTION_PLOT_MAX:]
-    phone_nums = [
-        activity_to_num.get(p, -1)
-        for p in list(phone_predictions)[-PREDICTION_PLOT_MAX:]
-    ]
-    watch_nums = [
-        activity_to_num.get(p, -1)
-        for p in list(watch_predictions)[-PREDICTION_PLOT_MAX:]
-    ]
-    fusion_nums = [
-        activity_to_num.get(p, -1)
-        for p in list(fusion_predictions)[-PREDICTION_PLOT_MAX:]
-    ]
+    n = len(last_times)
+
+    # take last n predictions for each source and left-pad with a sentinel (-1) if shorter
+    def aligned_numbers(pred_deque):
+        preds = list(pred_deque)[-n:]
+        if len(preds) < n:
+            pad = ["---"] * (n - len(preds))
+            preds = pad + preds
+        return [activity_to_num.get(p, -1) for p in preds]
+
+    phone_nums = aligned_numbers(phone_predictions)
+    watch_nums = aligned_numbers(watch_predictions)
+    fusion_nums = aligned_numbers(fusion_predictions)
+
+    # convert times to ISO strings for safety
+    x_serial = [(t.isoformat() if hasattr(t, "isoformat") else t) for t in last_times]
+
     fig = go.Figure()
     fig.add_trace(
         go.Scatter(
-            x=last_times,
+            x=x_serial,
             y=phone_nums,
             name="Phone",
             mode="lines+markers",
@@ -399,7 +437,7 @@ def create_prediction_timeline():
     )
     fig.add_trace(
         go.Scatter(
-            x=last_times,
+            x=x_serial,
             y=watch_nums,
             name="Watch",
             mode="lines+markers",
@@ -408,7 +446,7 @@ def create_prediction_timeline():
     )
     fig.add_trace(
         go.Scatter(
-            x=last_times,
+            x=x_serial,
             y=fusion_nums,
             name="Fusion",
             mode="lines+markers",
@@ -716,6 +754,7 @@ def data():
 
             except Exception as ex:
                 print("Error processing incoming sample:", ex)
+                traceback.print_exc()
                 continue
 
         frame_count += 1
@@ -1005,96 +1044,149 @@ app.layout = html.Div(
     Input("counter", "n_intervals"),
 )
 def update_dashboard(_counter):
-    with buffer_lock:
-        phone_samples = len(phone_buffer)
-        watch_samples = len(watch_buffer)
-        last_phone_pred = phone_predictions[-1] if len(phone_predictions) > 0 else "---"
-        last_watch_pred = watch_predictions[-1] if len(watch_predictions) > 0 else "---"
-        last_fusion_pred = (
-            fusion_predictions[-1] if len(fusion_predictions) > 0 else "---"
+    """
+    Wrapped in try/except to avoid a single error stopping periodic updates.
+    On exception, we log and return safe empty/sparse figures so the UI keeps refreshing.
+    """
+    try:
+        with buffer_lock:
+            phone_samples = len(phone_buffer)
+            watch_samples = len(watch_buffer)
+            last_phone_pred = (
+                phone_predictions[-1] if len(phone_predictions) > 0 else "---"
+            )
+            last_watch_pred = (
+                watch_predictions[-1] if len(watch_predictions) > 0 else "---"
+            )
+            last_fusion_pred = (
+                fusion_predictions[-1] if len(fusion_predictions) > 0 else "---"
+            )
+            last_phone_probs = (
+                phone_probs[-1]
+                if len(phone_probs) > 0
+                else np.zeros(len(ACTIVITY_LABELS))
+            )
+            last_watch_probs = (
+                watch_probs[-1]
+                if len(watch_probs) > 0
+                else np.zeros(len(ACTIVITY_LABELS))
+            )
+            last_fusion_probs = (
+                fusion_probs[-1]
+                if len(fusion_probs) > 0
+                else np.zeros(len(ACTIVITY_LABELS))
+            )
+
+            # Plot only the last PLOT_MAX_POINTS samples
+            slice_tail = None if PLOT_MAX_POINTS is None else -PLOT_MAX_POINTS
+            ta = list(time_accel)[slice_tail:]
+            ax = list(accel_x)[slice_tail:]
+            ay = list(accel_y)[slice_tail:]
+            az = list(accel_z)[slice_tail:]
+            tg = list(time_gyro)[slice_tail:]
+            gx = list(gyro_x)[slice_tail:]
+            gy = list(gyro_y)[slice_tail:]
+            gz = list(gyro_z)[slice_tail:]
+
+        status = html.Div(
+            [
+                html.Span("📱 Phone: ", style={"fontWeight": "bold"}),
+                html.Span(
+                    f"{phone_samples}/{WINDOW_SIZE} samples",
+                    style={
+                        "color": (
+                            "#27ae60" if phone_samples >= WINDOW_SIZE else "#e74c3c"
+                        )
+                    },
+                ),
+                html.Span(" | ", style={"margin": "0 12px"}),
+                html.Span("⌚ Watch: ", style={"fontWeight": "bold"}),
+                html.Span(
+                    f"{watch_samples}/{WINDOW_SIZE} samples",
+                    style={
+                        "color": (
+                            "#27ae60" if watch_samples >= WINDOW_SIZE else "#e74c3c"
+                        )
+                    },
+                ),
+                html.Span(" | ", style={"margin": "0 12px"}),
+                html.Span(f"Server: {local_ip}:8000", style={"fontWeight": "bold"}),
+                html.Span(" | ", style={"margin": "0 12px"}),
+                html.Span(f"Frames: {frame_count}", style={"color": "#7f8c8d"}),
+            ],
+            style={"fontSize": "16px", "padding": "8px"},
         )
-        last_phone_probs = (
-            phone_probs[-1] if len(phone_probs) > 0 else np.zeros(len(ACTIVITY_LABELS))
+
+        accel_fig = create_sensor_graph(
+            ta,
+            [ax, ay, az],
+            ["Accel X", "Accel Y", "Accel Z"],
+            "Accelerometer",
+            "Acceleration (m/s²)",
+            ["#e74c3c", "#3498db", "#2ecc71"],
         )
-        last_watch_probs = (
-            watch_probs[-1] if len(watch_probs) > 0 else np.zeros(len(ACTIVITY_LABELS))
+        gyro_fig = create_sensor_graph(
+            tg,
+            [gx, gy, gz],
+            ["Gyro X", "Gyro Y", "Gyro Z"],
+            "Gyroscope",
+            "Angular Velocity (rad/s)",
+            ["#f39c12", "#9b59b6", "#1abc9c"],
         )
-        last_fusion_probs = (
-            fusion_probs[-1]
-            if len(fusion_probs) > 0
-            else np.zeros(len(ACTIVITY_LABELS))
+
+        phone_prob_fig = create_prob_bars(last_phone_probs, "Phone Model Confidence")
+        watch_prob_fig = create_prob_bars(last_watch_probs, "Watch Model Confidence")
+        fusion_prob_fig = create_prob_bars(last_fusion_probs, "Fusion Model Confidence")
+        timeline_fig = create_prediction_timeline()
+
+        return (
+            status,
+            accel_fig,
+            gyro_fig,
+            last_phone_pred,
+            last_watch_pred,
+            last_fusion_pred,
+            phone_prob_fig,
+            watch_prob_fig,
+            fusion_prob_fig,
+            timeline_fig,
         )
 
-        # Plot only the last PLOT_MAX_POINTS samples
-        slice_tail = None if PLOT_MAX_POINTS is None else -PLOT_MAX_POINTS
-        ta = list(time_accel)[slice_tail:]
-        ax = list(accel_x)[slice_tail:]
-        ay = list(accel_y)[slice_tail:]
-        az = list(accel_z)[slice_tail:]
-        tg = list(time_gyro)[slice_tail:]
-        gx = list(gyro_x)[slice_tail:]
-        gy = list(gyro_y)[slice_tail:]
-        gz = list(gyro_z)[slice_tail:]
+    except Exception as e:
+        # Log full traceback to the server console but return safe defaults so the UI keeps refreshing.
+        print("[error] exception in update_dashboard:", e)
+        traceback.print_exc()
 
-    status = html.Div(
-        [
-            html.Span("📱 Phone: ", style={"fontWeight": "bold"}),
-            html.Span(
-                f"{phone_samples}/{WINDOW_SIZE} samples",
-                style={
-                    "color": "#27ae60" if phone_samples >= WINDOW_SIZE else "#e74c3c"
-                },
-            ),
-            html.Span(" | ", style={"margin": "0 12px"}),
-            html.Span("⌚ Watch: ", style={"fontWeight": "bold"}),
-            html.Span(
-                f"{watch_samples}/{WINDOW_SIZE} samples",
-                style={
-                    "color": "#27ae60" if watch_samples >= WINDOW_SIZE else "#e74c3c"
-                },
-            ),
-            html.Span(" | ", style={"margin": "0 12px"}),
-            html.Span(f"Server: {local_ip}:8000", style={"fontWeight": "bold"}),
-            html.Span(" | ", style={"margin": "0 12px"}),
-            html.Span(f"Frames: {frame_count}", style={"color": "#7f8c8d"}),
-        ],
-        style={"fontSize": "16px", "padding": "8px"},
-    )
+        safe_empty_fig = {
+            "data": [],
+            "layout": {"title": {"text": "Error (see server logs)"}},
+        }
+        safe_prob = create_prob_bars(np.zeros(len(ACTIVITY_LABELS)), "No Data")
+        safe_status = html.Div(
+            [
+                html.Span("📱 Phone: ", style={"fontWeight": "bold"}),
+                html.Span("0/150 samples", style={"color": "#e74c3c"}),
+                html.Span(" | ", style={"margin": "0 12px"}),
+                html.Span("⌚ Watch: ", style={"fontWeight": "bold"}),
+                html.Span("0/150 samples", style={"color": "#e74c3c"}),
+                html.Span(" | ", style={"margin": "0 12px"}),
+                html.Span(f"Server: {local_ip}:8000", style={"fontWeight": "bold"}),
+            ],
+            style={"fontSize": "16px", "padding": "8px"},
+        )
 
-    accel_fig = create_sensor_graph(
-        ta,
-        [ax, ay, az],
-        ["Accel X", "Accel Y", "Accel Z"],
-        "Accelerometer",
-        "Acceleration (m/s²)",
-        ["#e74c3c", "#3498db", "#2ecc71"],
-    )
-    gyro_fig = create_sensor_graph(
-        tg,
-        [gx, gy, gz],
-        ["Gyro X", "Gyro Y", "Gyro Z"],
-        "Gyroscope",
-        "Angular Velocity (rad/s)",
-        ["#f39c12", "#9b59b6", "#1abc9c"],
-    )
-
-    phone_prob_fig = create_prob_bars(last_phone_probs, "Phone Model Confidence")
-    watch_prob_fig = create_prob_bars(last_watch_probs, "Watch Model Confidence")
-    fusion_prob_fig = create_prob_bars(last_fusion_probs, "Fusion Model Confidence")
-    timeline_fig = create_prediction_timeline()
-
-    return (
-        status,
-        accel_fig,
-        gyro_fig,
-        last_phone_pred,
-        last_watch_pred,
-        last_fusion_pred,
-        phone_prob_fig,
-        watch_prob_fig,
-        fusion_prob_fig,
-        timeline_fig,
-    )
+        return (
+            safe_status,
+            safe_empty_fig,
+            safe_empty_fig,
+            "---",
+            "---",
+            "---",
+            safe_prob,
+            safe_prob,
+            safe_prob,
+            safe_empty_fig,
+        )
 
 
 # -----------------------
