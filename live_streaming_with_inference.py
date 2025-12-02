@@ -119,6 +119,71 @@ def is_model_loaded(m):
 # -----------------------
 # Utilities
 # -----------------------
+
+def auto_prune_buffers():
+    """
+    Remove old data to keep memory bounded while allowing continuous operation.
+    This is called periodically to maintain a sliding window of data.
+    """
+    max_age_seconds = 600  # Keep last 10 minutes of raw data
+    cutoff_time = datetime.now() - timedelta(seconds=max_age_seconds)
+    
+    global time_accel, accel_x, accel_y, accel_z, time_gyro, gyro_x, gyro_y, gyro_z
+    
+    # Only prune if buffers are actually bounded (not None)
+    if MAX_DATA_POINTS is not None:
+        return
+    
+    with buffer_lock:
+        try:
+            # Prune accelerometer data
+            while len(time_accel) > 0 and time_accel[0] < cutoff_time:
+                time_accel.popleft()
+                accel_x.popleft()
+                accel_y.popleft()
+                accel_z.popleft()
+            
+            # Prune gyroscope data
+            while len(time_gyro) > 0 and time_gyro[0] < cutoff_time:
+                time_gyro.popleft()
+                gyro_x.popleft()
+                gyro_y.popleft()
+                gyro_z.popleft()
+            
+            # Prune predictions (keep last 1000)
+            while len(phone_predictions) > 1000:
+                phone_predictions.popleft()
+                phone_probs.popleft()
+            
+            while len(watch_predictions) > 1000:
+                watch_predictions.popleft()
+                watch_probs.popleft()
+            
+            while len(fusion_predictions) > 1000:
+                fusion_predictions.popleft()
+                fusion_probs.popleft()
+                prediction_times.popleft()
+        
+        except Exception as e:
+            print(f"[WARNING] Pruning error: {e}")
+
+
+
+import threading
+import time as time_module
+
+def pruning_worker():
+    """Background thread that periodically prunes old data"""
+    while True:
+        try:
+            time_module.sleep(60)  # Prune every 60 seconds
+            auto_prune_buffers()
+            print(f"[pruning] Buffers pruned at {datetime.now().isoformat()}")
+        except Exception as e:
+            print(f"[ERROR] Pruning worker failed: {e}")
+
+
+
 def identify_device(device_string: str):
     if not device_string:
         return "phone"
@@ -356,57 +421,58 @@ def make_predictions():
 # Plot helpers
 # -----------------------
 def create_sensor_graph(time_data, sensor_data, names, title, yaxis_label, colors):
+    """Create sensor graph with STREAMING x-axis (scrolling, not compressed)"""
     data = []
     for d, name, color in zip(sensor_data, names, colors):
-        # Align x/y lengths to avoid Plotly errors
-        x_list = list(time_data)
-        y_list = list(d)
-        if len(x_list) != len(y_list):
-            # trim the longer list to the shorter
-            min_len = min(len(x_list), len(y_list))
-            if min_len == 0:
-                x_vals = []
-                y_vals = []
-            else:
-                x_vals = x_list[-min_len:]
-                y_vals = y_list[-min_len:]
-        else:
-            x_vals = x_list
-            y_vals = y_list
-
-        # convert datetimes to isoformat strings for safe serialization
-        x_serial = [(t.isoformat() if hasattr(t, "isoformat") else t) for t in x_vals]
-
-        data.append(go.Scatter(x=x_serial, y=y_vals, name=name, line=dict(color=color, width=2)))
-
+        data.append(
+            go.Scatter(
+                x=list(time_data), 
+                y=list(d), 
+                name=name, 
+                line=dict(color=color, width=2),
+                mode='lines'
+            )
+        )
+    
+    # Calculate x-axis range for streaming view
+    if len(time_data) > 0:
+        x_max = time_data[-1]
+        # Show last 30 seconds of data (adjust window as needed)
+        x_min = x_max - timedelta(seconds=30)
+        x_range = [x_min, x_max]
+    else:
+        x_range = None
+    
     layout = go.Layout(
         title=dict(text=title, font=dict(size=14, color="#2c3e50")),
-        xaxis=dict(title="Time", showgrid=True, gridcolor="#ecf0f1", type="date"),
+        xaxis=dict(
+            title="Time", 
+            showgrid=True, 
+            gridcolor="#ecf0f1", 
+            type="date",
+            range=x_range  # Fixed range that scrolls
+        ),
         yaxis=dict(title=yaxis_label, showgrid=True, gridcolor="#ecf0f1"),
         plot_bgcolor="white",
         paper_bgcolor="white",
         margin=dict(l=50, r=30, t=40, b=40),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        hovermode='x unified'
     )
+    
     fig = {"data": data, "layout": layout}
+    
+    # Set y-axis range
     try:
-        if len(time_data) > 0:
-            t0 = time_data[0]
-            t1 = time_data[-1]
-            t0s = t0.isoformat() if hasattr(t0, "isoformat") else t0
-            t1s = t1.isoformat() if hasattr(t1, "isoformat") else t1
-            fig["layout"]["xaxis"]["range"] = [t0s, t1s]
-        # determine y bounds from traces
-        all_vals = []
-        for tr in data:
-            all_vals.extend(tr["y"] if tr["y"] is not None else [])
-        if all_vals:
-            y_min = min(all_vals)
-            y_max = max(all_vals)
+        all_values = [item for sublist in sensor_data for item in sublist]
+        if all_values:
+            y_min = min(all_values)
+            y_max = max(all_values)
             y_margin = 1.0 if y_max - y_min == 0 else (y_max - y_min) * 0.1
             fig["layout"]["yaxis"]["range"] = [y_min - y_margin, y_max + y_margin]
     except Exception:
         pass
+    
     return fig
 
 
@@ -1097,21 +1163,32 @@ def update_dashboard(_counter):
 # -----------------------
 if __name__ == "__main__":
     print("\n" + "=" * 70)
-    print("STARTING IMU ACTIVITY RECOGNITION DASHBOARD (unbounded full)")
+    print("STARTING IMU ACTIVITY RECOGNITION DASHBOARD (unbounded storage)")
     print("=" * 70)
     print(f"Dashboard URL: http://{local_ip}:8000")
     print(f"Sensor Logger POST endpoint: http://{local_ip}:8000/data")
     print("=" * 70)
-    print("\nNOTE: MAX_DATA_POINTS =", MAX_DATA_POINTS)
-    if MAX_DATA_POINTS is None:
-        print("Buffers are unbounded. Stop the process to free memory.")
+    print(
+        "\nNOTE: MAX_DATA_POINTS is None -> buffers are unbounded but auto-pruning is ENABLED."
+    )
+    print("Old data is automatically removed to keep memory usage stable.")
     print("\nConfigure Sensor Logger:")
     print("  1. Set recording mode to 'Push to Server'")
     print(f"  2. Enter URL: http://{local_ip}:8000/data")
-    print("  3. Enable Accelerometer and Gyroscope sensors (watch may send 'wrist motion' events too)")
+    print(
+        "  3. Enable Accelerometer and Gyroscope sensors (watch may send 'wrist motion' events too)"
+    )
     print("  4. Set recording frequency to 50 Hz")
     print("  5. Start recording on both phone and watch")
     print("=" * 70 + "\n")
 
+    # START BACKGROUND PRUNING THREAD
+    pruning_thread = threading.Thread(target=pruning_worker, daemon=True)
+    pruning_thread.start()
+    print("[info] Background pruning thread started\n")
+
     # debug=False recommended in production
     app.run(port=8000, host="0.0.0.0", debug=False, threaded=True)
+
+
+
