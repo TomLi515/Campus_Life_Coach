@@ -14,6 +14,7 @@ import numpy as np
 import torch
 from pathlib import Path
 import traceback
+import sys
 
 # -----------------------
 # Basic config
@@ -121,12 +122,24 @@ last_both_ready_time = None
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
+def load_model(path):
+    try:
+        model = torch.load(path, map_location=device)
+        model.eval()
+        print(f"Loaded model: {path}")
+        print("MODEL:  ", model)
+        sys.exit()
+        return model
+    except Exception as e:
+        print(f"Failed to load model {path}: {e}")
+        return None
+
 MODEL_DIR = Path("finetune/models/dashboard_models")
 # placeholders (if you load actual nn.Modules later, set them here)
-phone_model = "phone_only_classifier.pth"
-watch_model = "watch_only_classifier.pth"
-fusion_model = "fusion_classifier.pth"
-
+phone_model = load_model(MODEL_DIR / "phone_only_classifier.pth")
+watch_model = load_model(MODEL_DIR / "watch_only_classifier.pth")
+fusion_model = load_model(MODEL_DIR / "fusion_classifier.pth")
+sys.exit()
 
 def is_model_loaded(m):
     return isinstance(m, torch.nn.Module)
@@ -782,25 +795,6 @@ def data():
                                 call_predict = True
                         else:
                             print("[debug] gyro(phone): cached gyro; waiting for accel to pair.")
-
-                    # fallback: if event contains x,y,z treat as phone accel (best-effort)
-                    else:
-                        vals = d.get("values", {})
-                        if isinstance(vals, dict) and ("x" in vals and "y" in vals and "z" in vals):
-                            try:
-                                ax = float(vals.get("x", 0.0))
-                                ay = float(vals.get("y", 0.0))
-                                az = float(vals.get("z", 0.0))
-                                phone_time_accel.append(ts)
-                                phone_accel_x.append(ax)
-                                phone_accel_y.append(ay)
-                                phone_accel_z.append(az)
-                                accel_cache["phone"].append({"ax": ax, "ay": ay, "az": az, "timestamp": ts})
-                                print("[debug] fallback: treated unknown event with x,y,z as phone accel.")
-                            except Exception:
-                                print("[debug] fallback: could not parse numeric x,y,z.")
-                        else:
-                            print(f"[info] Unknown sensor name '{name_raw}' from device '{device_raw}' — skipping.")
 
                 except Exception as ex:
                     print("Error processing incoming sample:", ex)
