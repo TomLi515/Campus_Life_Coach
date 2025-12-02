@@ -1,19 +1,21 @@
-[IDENTIFY] name='gyroscopeuncalibrated' device='None' -> role='phone'
-phone prediction error: Numpy is not available
+During handling of the above exception, another exception occurred:
+
 Traceback (most recent call last):
-  File "/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/model_load_4_waveforms.py", line 543, in predict_phone
-    x = torch.from_numpy(normalize_window(window)).unsqueeze(0).float().to(device)
-RuntimeError: Numpy is not available
-[phone_pred] 2025-12-02T15:18:41.057500 -> Error (phone_buf=16561)
-watch prediction error: Numpy is not available
+  File "/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/model_load_4_waveforms.py", line 735, in predict_phone
+    outputs = phone_model(x)
+  File "/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/.venv/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/.venv/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/finetune/src/finetune/models.py", line 153, in forward
+    embeddings = self.encoder(x)  # (batch, 256)
+TypeError: 'int' object is not callable
+watch prediction error: 'int' object is not callable
 Traceback (most recent call last):
-  File "/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/model_load_4_waveforms.py", line 560, in predict_watch
-    x = torch.from_numpy(normalize_window(window)).unsqueeze(0).float().to(device)
-RuntimeError: Numpy is not available
-[watch_pred] 2025-12-02T15:18:41.058202 -> Error (watch_buf=8262)
-fusion prediction error: Numpy is not available
-Traceback (most recent call last):
-  File "/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/model_load_4_waveforms.py", line 577, in predict_fusion
-    xp = torch.from_numpy(normalize_window(phone_window)).unsqueeze(0).float().to(device)
-RuntimeError: Numpy is not available
-[fusion] 2025-12-02T15:18:41.056604 fusion_pred=Error (phone_buf=16561 watch_buf=8262)
+  File "/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/model_load_4_waveforms.py", line 781, in predict_fusion
+    outputs = fusion_model(xp, xw)
+  File "/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/.venv/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/.venv/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+    return forward_call(*args, **kwargs)
+TypeError: forward() takes 2 positional arguments but 3 were given
