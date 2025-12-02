@@ -439,7 +439,7 @@ def create_sensor_graph(time_data, sensor_data, names, title, yaxis_label, color
     if len(time_data) > 0:
         x_max = time_data[-1]
         # Show last 30 seconds of data (adjust window as needed)
-        x_min = x_max - timedelta(seconds=30)
+        x_min = x_max - timedelta(seconds=10)
         x_range = [x_min, x_max]
     else:
         x_range = None
@@ -744,23 +744,23 @@ def data():
                             print("[debug] gyro(phone): cached gyro; waiting for accel to pair.")
 
                     # fallback: if event contains x,y,z treat as phone accel (best-effort)
-                    else:
-                        vals = d.get("values", {})
-                        if isinstance(vals, dict) and ("x" in vals and "y" in vals and "z" in vals):
-                            try:
-                                ax = float(vals.get("x", 0.0))
-                                ay = float(vals.get("y", 0.0))
-                                az = float(vals.get("z", 0.0))
-                                time_accel.append(ts)
-                                accel_x.append(ax)
-                                accel_y.append(ay)
-                                accel_z.append(az)
-                                accel_cache["phone"].append({"ax": ax, "ay": ay, "az": az, "timestamp": ts})
-                                print("[debug] fallback: treated unknown event with x,y,z as phone accel.")
-                            except Exception:
-                                print("[debug] fallback: could not parse numeric x,y,z.")
-                        else:
-                            print(f"[info] Unknown sensor name '{name_raw}' from device '{device_raw}' — skipping.")
+                    # else:
+                    #     vals = d.get("values", {})
+                    #     if isinstance(vals, dict) and ("x" in vals and "y" in vals and "z" in vals):
+                    #         try:
+                    #             ax = float(vals.get("x", 0.0))
+                    #             ay = float(vals.get("y", 0.0))
+                    #             az = float(vals.get("z", 0.0))
+                    #             time_accel.append(ts)
+                    #             accel_x.append(ax)
+                    #             accel_y.append(ay)
+                    #             accel_z.append(az)
+                    #             accel_cache["phone"].append({"ax": ax, "ay": ay, "az": az, "timestamp": ts})
+                    #             print("[debug] fallback: treated unknown event with x,y,z as phone accel.")
+                    #         except Exception:
+                    #             print("[debug] fallback: could not parse numeric x,y,z.")
+                    #     else:
+                    #         print(f"[info] Unknown sensor name '{name_raw}' from device '{device_raw}' — skipping.")
 
                 except Exception as ex:
                     print("Error processing incoming sample:", ex)
