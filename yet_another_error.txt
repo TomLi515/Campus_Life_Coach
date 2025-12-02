@@ -1,0 +1,19 @@
+[IDENTIFY] name='gyroscopeuncalibrated' device='None' -> role='phone'
+phone prediction error: Numpy is not available
+Traceback (most recent call last):
+  File "/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/model_load_4_waveforms.py", line 543, in predict_phone
+    x = torch.from_numpy(normalize_window(window)).unsqueeze(0).float().to(device)
+RuntimeError: Numpy is not available
+[phone_pred] 2025-12-02T15:18:41.057500 -> Error (phone_buf=16561)
+watch prediction error: Numpy is not available
+Traceback (most recent call last):
+  File "/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/model_load_4_waveforms.py", line 560, in predict_watch
+    x = torch.from_numpy(normalize_window(window)).unsqueeze(0).float().to(device)
+RuntimeError: Numpy is not available
+[watch_pred] 2025-12-02T15:18:41.058202 -> Error (watch_buf=8262)
+fusion prediction error: Numpy is not available
+Traceback (most recent call last):
+  File "/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/model_load_4_waveforms.py", line 577, in predict_fusion
+    xp = torch.from_numpy(normalize_window(phone_window)).unsqueeze(0).float().to(device)
+RuntimeError: Numpy is not available
+[fusion] 2025-12-02T15:18:41.056604 fusion_pred=Error (phone_buf=16561 watch_buf=8262)

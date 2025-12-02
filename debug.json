@@ -1,0 +1,212 @@
+{
+    "both_ready_flag": true,
+    "last_both_ready_time": "2025-12-02T15:17:20.631262",
+    "last_phone_sample_ts": "2025-12-02T15:17:28.099787",
+    "last_prediction_time": "2025-12-02T15:17:27.484790",
+    "last_watch_sample_ts": "2025-12-02T15:17:27.816133",
+    "model_status": {
+        "fusion_load_info": {
+            "loaded": true,
+            "path": "finetune/models/dashboard_models/fusion_classifier.pth",
+            "why_failed": null
+        },
+        "fusion_loaded": true,
+        "fusion_model_var": "<class 'finetune.models.SingleStreamClassifier'>",
+        "phone_load_info": {
+            "loaded": true,
+            "path": "finetune/models/dashboard_models/phone_only_classifier.pth",
+            "why_failed": null
+        },
+        "phone_loaded": true,
+        "phone_model_var": "<class 'finetune.models.SingleStreamClassifier'>",
+        "watch_load_info": {
+            "loaded": true,
+            "path": "finetune/models/dashboard_models/watch_only_classifier.pth",
+            "why_failed": null
+        },
+        "watch_loaded": true,
+        "watch_model_var": "<class 'finetune.models.SingleStreamClassifier'>"
+    },
+    "phone_buffer_len": 2019,
+    "recent_device_strings": [
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None"
+    ],
+    "recent_events_count": 50,
+    "recent_events_sample": [
+        {
+            "raw": {
+                "name": "accelerometer",
+                "time": 1764710248079832800,
+                "values": {
+                    "x": -0.008742036316916346,
+                    "y": 0.011088836905080824,
+                    "z": 0.06389525680541992
+                }
+            },
+            "received_at": "2025-12-02T15:17:28.539248"
+        },
+        {
+            "raw": {
+                "name": "gyroscopeuncalibrated",
+                "time": 1764710248089810000,
+                "values": {
+                    "x": -0.0028690234757959843,
+                    "y": 0.00010652644414221868,
+                    "z": -0.00010626012954162434
+                }
+            },
+            "received_at": "2025-12-02T15:17:28.540138"
+        },
+        {
+            "raw": {
+                "name": "accelerometeruncalibrated",
+                "time": 1764710248089810000,
+                "values": {
+                    "x": -0.0116119384765625,
+                    "y": -0.015594482421875,
+                    "z": -0.9941253662109375
+                }
+            },
+            "received_at": "2025-12-02T15:17:28.540252"
+        },
+        {
+            "raw": {
+                "name": "gyroscope",
+                "time": 1764710248089810000,
+                "values": {
+                    "x": 0.0010055559687316418,
+                    "y": -0.00011905060819117352,
+                    "z": -0.00021586788352578878
+                }
+            },
+            "received_at": "2025-12-02T15:17:28.540484"
+        },
+        {
+            "raw": {
+                "name": "accelerometer",
+                "time": 1764710248089810000,
+                "values": {
+                    "x": -0.00679685706589371,
+                    "y": 0.01920700570261106,
+                    "z": 0.05551496647298336
+                }
+            },
+            "received_at": "2025-12-02T15:17:28.540554"
+        },
+        {
+            "raw": {
+                "name": "gyroscopeuncalibrated",
+                "time": 1764710248099786800,
+                "values": {
+                    "x": -0.0046304380521178246,
+                    "y": -0.0005573995877057314,
+                    "z": 0.00040506679215468466
+                }
+            },
+            "received_at": "2025-12-02T15:17:28.540630"
+        },
+        {
+            "raw": {
+                "name": "accelerometeruncalibrated",
+                "time": 1764710248099786800,
+                "values": {
+                    "x": -0.013641357421875,
+                    "y": -0.015716552734375,
+                    "z": -0.9943389892578125
+                }
+            },
+            "received_at": "2025-12-02T15:17:28.540690"
+        },
+        {
+            "raw": {
+                "name": "gyroscope",
+                "time": 1764710248099786800,
+                "values": {
+                    "x": -0.0007507647387683392,
+                    "y": -0.00078355468576774,
+                    "z": 0.0002990110660903156
+                }
+            },
+            "received_at": "2025-12-02T15:17:28.540743"
+        },
+        {
+            "raw": {
+                "name": "accelerometer",
+                "time": 1764710248099786800,
+                "values": {
+                    "x": -0.026636607714090495,
+                    "y": 0.018095044139027596,
+                    "z": 0.053417701932787894
+                }
+            },
+            "received_at": "2025-12-02T15:17:28.540799"
+        },
+        {
+            "raw": {
+                "name": "gyroscopeuncalibrated",
+                "time": 1764710248109763800,
+                "values": {
+                    "x": -0.004059989005327225,
+                    "y": -0.0004942826926708221,
+                    "z": 0.0005435511702671647
+                }
+            },
+            "received_at": "2025-12-02T15:17:28.540856"
+        }
+    ],
+    "sample_counts": {
+        "phone": 2019,
+        "watch": 1020
+    },
+    "timestamp": "2025-12-02T15:17:28.541675",
+    "watch_buffer_len": 1020
+}
