@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# realtime_dashboard_wrist_watch_unbounded.py
+# realtime_dashboard_unbounded_full.py
 import dash
 from dash.dependencies import Output, Input
 from dash import dcc, html
@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import json
 import plotly.graph_objs as go
 from collections import deque
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import socket
 import numpy as np
 import torch
@@ -29,11 +29,11 @@ server = Flask(__name__)
 app = dash.Dash(__name__, server=server)
 
 # -----------------------
-# Configuration
+# Configuration (tweak as desired)
 # -----------------------
-# If you want truly unbounded storage set MAX_DATA_POINTS = None (default here).
+# If you want unbounded storage set MAX_DATA_POINTS = None (default here).
 # WARNING: unbounded growth will consume memory over time. Stop the process when done.
-MAX_DATA_POINTS = None  # None -> unbounded deques
+MAX_DATA_POINTS = None  # None => unbounded; or set integer to cap storage
 
 # How many historical points to draw on the dashboard graphs (keeps browser responsive).
 PLOT_MAX_POINTS = 5000
@@ -56,9 +56,10 @@ buffer_lock = Lock()
 
 
 def make_deque(maxlen):
-    return deque(maxlen=maxlen) if maxlen is not None else deque()
+    return deque(maxlen=maxlen) if (maxlen is not None) else deque()
 
 
+# time series for plotting (server keeps full history if MAX_DATA_POINTS is None)
 time_accel = make_deque(MAX_DATA_POINTS)
 accel_x = make_deque(MAX_DATA_POINTS)
 accel_y = make_deque(MAX_DATA_POINTS)
@@ -69,14 +70,18 @@ gyro_x = make_deque(MAX_DATA_POINTS)
 gyro_y = make_deque(MAX_DATA_POINTS)
 gyro_z = make_deque(MAX_DATA_POINTS)
 
+# IMPORTANT: keep phone_buffer/watch_buffer unbounded unless user requests capping
 phone_buffer = make_deque(MAX_DATA_POINTS)  # dicts: ax,ay,az,gx,gy,gz,timestamp
 watch_buffer = make_deque(MAX_DATA_POINTS)
 
+# caches used to pair accel <-> gyro reliably (bounded to avoid runaway)
 accel_cache = {"phone": make_deque(2000), "watch": make_deque(2000)}
 gyro_cache = {"phone": make_deque(2000), "watch": make_deque(2000)}
 
+# sample counters for triggering inference cadence
 sample_counts = {"phone": 0, "watch": 0}
 
+# Prediction history (server stores full history)
 phone_predictions = make_deque(MAX_DATA_POINTS)
 watch_predictions = make_deque(MAX_DATA_POINTS)
 fusion_predictions = make_deque(MAX_DATA_POINTS)
@@ -100,8 +105,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
 MODEL_DIR = Path("finetune/models/dashboard_models")
-# your placeholders (you said you replaced them already). If these are nn.Modules,
-# predictions will use them; otherwise placeholder Dirichlet outputs are used.
+# placeholders (if you load actual nn.Modules later, set them here)
 phone_model = "phone_only_classifier.pth"
 watch_model = "watch_only_classifier.pth"
 fusion_model = "fusion_classifier.pth"
@@ -183,7 +187,7 @@ def create_window_from_buffer(buffer):
     return window
 
 
-# Prediction functions
+# Prediction functions (safe fallbacks if models are not loaded)
 def predict_phone(window):
     if window is None:
         return "---", np.zeros(len(ACTIVITY_LABELS))
@@ -257,6 +261,7 @@ def predict_fusion(phone_window, watch_window):
 
 
 def make_predictions():
+    """Make predictions if windows available."""
     global both_ready_flag, last_both_ready_time
     now = datetime.now()
     phone_win = create_window_from_buffer(phone_buffer)
@@ -268,13 +273,18 @@ def make_predictions():
         p_label, p_probs = predict_phone(phone_win)
         phone_predictions.append(p_label)
         phone_probs.append(p_probs)
-        print(f"[phone_pred] {datetime.now().isoformat()} -> {p_label}")
+        # print a concise log
+        print(
+            f"[phone_pred] {datetime.now().isoformat()} -> {p_label} (phone_buf={len(phone_buffer)})"
+        )
 
     if watch_ready:
         w_label, w_probs = predict_watch(watch_win)
         watch_predictions.append(w_label)
         watch_probs.append(w_probs)
-        print(f"[watch_pred] {datetime.now().isoformat()} -> {w_label}")
+        print(
+            f"[watch_pred] {datetime.now().isoformat()} -> {w_label} (watch_buf={len(watch_buffer)})"
+        )
 
     if phone_ready and watch_ready:
         f_label, f_probs = predict_fusion(phone_win, watch_win)
@@ -285,6 +295,7 @@ def make_predictions():
             f"[fusion] {now.isoformat()} fusion_pred={f_label} (phone_buf={len(phone_buffer)} watch_buf={len(watch_buffer)})"
         )
 
+    # set both_ready_flag once when both buffers reach WINDOW_SIZE
     if len(phone_buffer) >= WINDOW_SIZE and len(watch_buffer) >= WINDOW_SIZE:
         if not both_ready_flag:
             both_ready_flag = True
@@ -360,7 +371,6 @@ def create_prob_bars(probs, title):
 
 
 def create_prediction_timeline():
-    # limit the plotted predictions to most recent PREDICTION_PLOT_MAX entries
     if len(prediction_times) == 0:
         return go.Figure()
     activity_to_num = {label: i for i, label in enumerate(ACTIVITY_LABELS)}
@@ -423,15 +433,16 @@ def create_prediction_timeline():
 
 
 # -----------------------
-# Data ingestion endpoint
+# Data ingestion endpoint (wrist mapping + robust pairing)
 # -----------------------
 @server.route("/data", methods=["POST"])
 def data():
     """
     Parsing rules:
-    - name contains 'wrist' => treat as WATCH data (use rotationRate* and acceleration* keys)
-    - name == 'gyroscope' or 'accelerometer' => treat as PHONE data
-    - else fallback to identify_device(device_string)
+    - If 'name' contains 'wrist' => treat as watch (extract rotationRate*/acceleration*).
+    - If 'name' is 'gyroscope' or 'accelerometer' => treat as phone (extract x,y,z).
+    - Else fallback to identify_device(device_string).
+    Always returns 200 to keep Sensor Logger streaming.
     """
     global frame_count
     if request.method != "POST":
@@ -452,12 +463,14 @@ def data():
     with buffer_lock:
         for d in samples:
             try:
+                # store raw event for debug endpoint & quick inspection
                 recent_events.append(
                     {"received_at": datetime.now().isoformat(), "raw": d}
                 )
                 device_raw = d.get("device", None)
                 recent_device_strings.append(str(device_raw))
 
+                # Console dump (useful for debugging)
                 print("---------- INCOMING EVENT ----------")
                 print("Raw event:", d)
                 print("device:", device_raw)
@@ -466,6 +479,7 @@ def data():
                 print("values:", d.get("values"))
                 print("------------------------------------")
 
+                # parse timestamp (ns or seconds)
                 ts_ns = d.get("time", None)
                 if ts_ns is None:
                     ts = datetime.now()
@@ -481,7 +495,7 @@ def data():
                 name_raw = d.get("name", "")
                 name = name_raw.lower()
 
-                # Determine 'role' according to name-first rules
+                # decide role primarily by name (explicit rule)
                 if "wrist" in name:
                     role = "watch"
                 elif name in ("gyroscope", "accelerometer"):
@@ -493,7 +507,7 @@ def data():
                     f"[IDENTIFY] name='{name_raw}' device='{device_raw}' -> role='{role}'"
                 )
 
-                # -- wrist (watch) --
+                # handle wrist-motion (watch)
                 if "wrist" in name:
                     vals = d.get("values", {})
                     gx = float(
@@ -515,6 +529,7 @@ def data():
                         vals.get("accelerationZ", vals.get("acceleration_z", 0.0))
                     )
 
+                    # append to plotting series
                     time_accel.append(ts)
                     accel_x.append(ax)
                     accel_y.append(ay)
@@ -524,6 +539,7 @@ def data():
                     gyro_y.append(gy)
                     gyro_z.append(gz)
 
+                    # caches
                     accel_cache["watch"].append(
                         {"ax": ax, "ay": ay, "az": az, "timestamp": ts}
                     )
@@ -531,17 +547,10 @@ def data():
                         {"gx": gx, "gy": gy, "gz": gz, "timestamp": ts}
                     )
 
-                    paired_accel = (
-                        accel_cache["watch"][-1]
-                        if len(accel_cache["watch"]) > 0
-                        else None
-                    )
-                    paired_gyro = (
-                        gyro_cache["watch"][-1]
-                        if len(gyro_cache["watch"]) > 0
-                        else None
-                    )
-                    if paired_accel is not None and paired_gyro is not None:
+                    # create sample if both present
+                    if len(accel_cache["watch"]) > 0 and len(gyro_cache["watch"]) > 0:
+                        paired_accel = accel_cache["watch"][-1]
+                        paired_gyro = gyro_cache["watch"][-1]
                         sample = {
                             "ax": paired_accel["ax"],
                             "ay": paired_accel["ay"],
@@ -553,17 +562,17 @@ def data():
                         }
                         watch_buffer.append(sample)
                         sample_counts["watch"] += 1
+                        # concise append log (not every event to prevent too much noise)
+                        if sample_counts["watch"] % 50 == 0:
+                            print(f"[append] watch_buffer size now {len(watch_buffer)}")
                         if sample_counts["watch"] % STEP_SIZE_RT == 0:
                             make_predictions()
-                        print(
-                            f"[debug] wrist-motion -> appended watch sample (total watch_buffer={len(watch_buffer)})"
-                        )
                     else:
                         print(
-                            "[debug] wrist-motion: cache updated but could not create paired sample yet."
+                            "[debug] wrist-motion: updated caches; waiting for counterpart to pair."
                         )
 
-                # -- phone accelerometer event --
+                # phone accelerometer
                 elif name == "accelerometer":
                     vals = d.get("values", {})
                     ax = float(
@@ -616,17 +625,16 @@ def data():
                         }
                         phone_buffer.append(sample)
                         sample_counts["phone"] += 1
+                        if sample_counts["phone"] % 50 == 0:
+                            print(f"[append] phone_buffer size now {len(phone_buffer)}")
                         if sample_counts["phone"] % STEP_SIZE_RT == 0:
                             make_predictions()
-                        print(
-                            f"[debug] accel(phone) -> appended phone sample (total phone_buffer={len(phone_buffer)})"
-                        )
                     else:
                         print(
                             "[debug] accel(phone): cached accel; waiting for gyro to pair."
                         )
 
-                # -- phone gyroscope event --
+                # phone gyroscope
                 elif name == "gyroscope":
                     vals = d.get("values", {})
                     gx = float(
@@ -670,21 +678,21 @@ def data():
                         }
                         phone_buffer.append(sample)
                         sample_counts["phone"] += 1
+                        if sample_counts["phone"] % 50 == 0:
+                            print(f"[append] phone_buffer size now {len(phone_buffer)}")
                         if sample_counts["phone"] % STEP_SIZE_RT == 0:
                             make_predictions()
-                        print(
-                            f"[debug] gyro(phone) -> appended phone sample (total phone_buffer={len(phone_buffer)})"
-                        )
                     else:
                         print(
                             "[debug] gyro(phone): cached gyro; waiting for accel to pair."
                         )
 
-                # -- fallback for unknown names --
+                # fallback: if event contains x,y,z treat as phone accel (best-effort)
                 else:
                     vals = d.get("values", {})
-                    maybe_x = vals.get("x", None)
-                    if maybe_x is not None:
+                    if isinstance(vals, dict) and (
+                        "x" in vals and "y" in vals and "z" in vals
+                    ):
                         try:
                             ax = float(vals.get("x", 0.0))
                             ay = float(vals.get("y", 0.0))
@@ -697,12 +705,10 @@ def data():
                                 {"ax": ax, "ay": ay, "az": az, "timestamp": ts}
                             )
                             print(
-                                "[debug] unknown event but had x,y,z -> treated as phone accel (fallback)."
+                                "[debug] fallback: treated unknown event with x,y,z as phone accel."
                             )
                         except Exception:
-                            print(
-                                "[debug] unknown event fallback did not find numeric x,y,z."
-                            )
+                            print("[debug] fallback: could not parse numeric x,y,z.")
                     else:
                         print(
                             f"[info] Unknown sensor name '{name_raw}' from device '{device_raw}' — skipping."
@@ -714,18 +720,20 @@ def data():
 
         frame_count += 1
 
-        if frame_count % 50 == 0:
+        # periodic summary
+        if frame_count % 200 == 0:
             print(
                 f"[summary @ frame {frame_count}] phone_buffer={len(phone_buffer)} watch_buffer={len(watch_buffer)} "
-                f"accel_cache(phone)={len(accel_cache['phone'])} gyro_cache(phone)={len(gyro_cache['phone'])} "
-                f"accel_cache(watch)={len(accel_cache['watch'])} gyro_cache(watch)={len(gyro_cache['watch'])}"
+                f"accel_cache_p={len(accel_cache['phone'])} gyro_cache_p={len(gyro_cache['phone'])} "
+                f"accel_cache_w={len(accel_cache['watch'])} gyro_cache_w={len(gyro_cache['watch'])}"
             )
 
+    # Always return 200 OK to keep Sensor Logger streaming
     return "ok", 200
 
 
 # -----------------------
-# Debug endpoint
+# Debug/status endpoints
 # -----------------------
 @server.route("/debug", methods=["GET"])
 def debug_info():
@@ -770,23 +778,68 @@ def debug_info():
             "recent_events_sample": recent_ev[-10:],
             "model_status": model_status,
         }
-    return resp
+    return jsonify(resp)
+
+
+@server.route("/status", methods=["GET"])
+def status_compact():
+    """Compact status endpoint for quick checks."""
+    with buffer_lock:
+        return jsonify(
+            {
+                "phone_buffer_len": len(phone_buffer),
+                "watch_buffer_len": len(watch_buffer),
+                "frames": frame_count,
+                "both_ready": both_ready_flag,
+            }
+        )
+
+
+@server.route("/clear", methods=["POST", "GET"])
+def clear_buffers():
+    """Clear all stored buffers (useful to start fresh without restarting server)."""
+    with buffer_lock:
+        time_accel.clear()
+        accel_x.clear()
+        accel_y.clear()
+        accel_z.clear()
+        time_gyro.clear()
+        gyro_x.clear()
+        gyro_y.clear()
+        gyro_z.clear()
+        phone_buffer.clear()
+        watch_buffer.clear()
+        accel_cache["phone"].clear()
+        accel_cache["watch"].clear()
+        gyro_cache["phone"].clear()
+        gyro_cache["watch"].clear()
+        phone_predictions.clear()
+        watch_predictions.clear()
+        fusion_predictions.clear()
+        prediction_times.clear()
+        phone_probs.clear()
+        watch_probs.clear()
+        fusion_probs.clear()
+        recent_events.clear()
+        recent_device_strings.clear()
+    print("[action] cleared all buffers and caches via /clear")
+    return jsonify({"status": "cleared"})
 
 
 @server.route("/", methods=["GET"])
 def index():
-    return "IMU Activity Recognition Dashboard (wrist-watch mapping, unbounded storage) running. POST data to /data endpoint. Visit /debug for state."
+    return "IMU Activity Recognition Dashboard (unbounded) running. POST data to /data endpoint. Visit /debug or /status."
 
 
 # -----------------------
-# Dash layout
+# Dash layout (same UI)
 # -----------------------
 app.layout = html.Div(
     [
         html.Div(
             [
                 html.H1(
-                    "🏃 Real-Time IMU Activity Recognition (wrist-watch mapping, unbounded storage)",
+                    "🏃 Real-Time IMU Activity Recognition (unbounded)",
                     style={
                         "textAlign": "center",
                         "color": "#2c3e50",
@@ -794,7 +847,7 @@ app.layout = html.Div(
                     },
                 ),
                 html.P(
-                    "Streaming sensor data from phone and watch with three-model prediction — debug enabled",
+                    "Streaming sensor data from phone and watch — debug enabled",
                     style={
                         "textAlign": "center",
                         "color": "#7f8c8d",
@@ -934,7 +987,7 @@ app.layout = html.Div(
 
 
 # -----------------------
-# Dash callback: take only last PLOT_MAX_POINTS for plotting so the UI remains responsive
+# Dash update callback (plots only last PLOT_MAX_POINTS points)
 # -----------------------
 @app.callback(
     [
@@ -972,16 +1025,17 @@ def update_dashboard(_counter):
             else np.zeros(len(ACTIVITY_LABELS))
         )
 
-        # Plot only the last PLOT_MAX_POINTS points to keep browser responsive
-        ta = list(time_accel)[-PLOT_MAX_POINTS:]
-        ax = list(accel_x)[-PLOT_MAX_POINTS:]
-        ay = list(accel_y)[-PLOT_MAX_POINTS:]
-        az = list(accel_z)[-PLOT_MAX_POINTS:]
-        tg = list(time_gyro)[-PLOT_MAX_POINTS:]
-        gx = list(gyro_x)[-PLOT_MAX_POINTS:]
-        gy = list(gyro_y)[-PLOT_MAX_POINTS:]
-        gz = list(gyro_z)[-PLOT_MAX_POINTS:]
-        # prediction timeline handled separately within create_prediction_timeline
+        # Plot only the last PLOT_MAX_POINTS samples
+        slice_tail = None if PLOT_MAX_POINTS is None else -PLOT_MAX_POINTS
+        ta = list(time_accel)[slice_tail:]
+        ax = list(accel_x)[slice_tail:]
+        ay = list(accel_y)[slice_tail:]
+        az = list(accel_z)[slice_tail:]
+        tg = list(time_gyro)[slice_tail:]
+        gx = list(gyro_x)[slice_tail:]
+        gy = list(gyro_y)[slice_tail:]
+        gz = list(gyro_z)[slice_tail:]
+
     status = html.Div(
         [
             html.Span("📱 Phone: ", style={"fontWeight": "bold"}),
@@ -1048,17 +1102,14 @@ def update_dashboard(_counter):
 # -----------------------
 if __name__ == "__main__":
     print("\n" + "=" * 70)
-    print("STARTING IMU ACTIVITY RECOGNITION DASHBOARD (unbounded storage)")
+    print("STARTING IMU ACTIVITY RECOGNITION DASHBOARD (unbounded full)")
     print("=" * 70)
     print(f"Dashboard URL: http://{local_ip}:8000")
     print(f"Sensor Logger POST endpoint: http://{local_ip}:8000/data")
     print("=" * 70)
-    print(
-        "\nNOTE: MAX_DATA_POINTS is None -> buffers are unbounded and will grow until you stop the server."
-    )
-    print(
-        "Stop the process to free memory. If you want a capped history, set MAX_DATA_POINTS to an integer."
-    )
+    print("\nNOTE: MAX_DATA_POINTS =", MAX_DATA_POINTS)
+    if MAX_DATA_POINTS is None:
+        print("Buffers are unbounded. Stop the process to free memory.")
     print("\nConfigure Sensor Logger:")
     print("  1. Set recording mode to 'Push to Server'")
     print(f"  2. Enter URL: http://{local_ip}:8000/data")
