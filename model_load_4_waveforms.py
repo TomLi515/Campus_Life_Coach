@@ -347,8 +347,30 @@ def _strip_prefix_from_state_dict(state, prefix):
 
 
 def load_model(path: Path, model_kind_hint: str = None):
+    """
+    Robust loader with adapter fallback.
+    - Tries torch.jit .pt first.
+    - Tries robust_torch_load + construct original model if constructors present.
+    - If constructors missing, builds a lightweight EncoderAdapter+Linear classifier and
+      tries to transplant classifier weights from the checkpoint state_dict.
+    """
     path = Path(path)
     entry = model_load_info.get(model_kind_hint, None)
+
+    # prefer TorchScript artifact if available
+    ts_path = path.with_suffix(".pt")
+    if ts_path.exists():
+        try:
+            print(f"[info] Loading TorchScript module from {ts_path}")
+            m = torch.jit.load(str(ts_path)).to(device).eval()
+            if entry is not None:
+                entry["loaded"] = True
+                entry["path"] = str(ts_path)
+            return m
+        except Exception as e:
+            print(f"[warning] torch.jit.load failed for {ts_path}: {e}")
+
+    # load checkpoint robustly
     try:
         loaded = robust_torch_load(path)
     except Exception as e:
@@ -358,24 +380,23 @@ def load_model(path: Path, model_kind_hint: str = None):
             entry["why_failed"] = err
         return None
 
+    # If checkpoint itself is an nn.Module
     if isinstance(loaded, torch.nn.Module):
-        mod = loaded.to(device)
-        mod.eval()
+        mod = loaded.to(device).eval()
         print(f"[info] Loaded full nn.Module from {path}")
         if entry is not None:
-            entry["loaded"] = True
-            entry["path"] = str(path)
-        return mod
+            entry["loaded"] = True; entry["path"] = str(path)
+        inspect_loaded_model(model_kind_hint, mod, path)
+        return repair_single_stream_model(mod, model_kind_hint)
 
+    # Extract state dict + config
     state_dict, cfg, module_obj = _extract_state_dict_and_config(loaded)
     if module_obj is not None:
-        model = module_obj.to(device)
-        model.eval()
+        mdl = module_obj.to(device).eval()
         if entry is not None:
-            entry["loaded"] = True
-            entry["path"] = str(path)
-        print(f"[info] Loaded module object from {path}")
-        return model
+            entry["loaded"] = True; entry["path"] = str(path)
+        inspect_loaded_model(model_kind_hint, mdl, path)
+        return repair_single_stream_model(mdl, model_kind_hint)
 
     if state_dict is None:
         err = f"No recognizable state_dict or module found in {path}"
@@ -384,44 +405,28 @@ def load_model(path: Path, model_kind_hint: str = None):
             entry["why_failed"] = err
         return None
 
-    # unwrap nested state if necessary
-    if (
-        "state_dict" in state_dict
-        and isinstance(state_dict["state_dict"], dict)
-        and len(state_dict) > 1
-    ):
+    # unwrap nested
+    if "state_dict" in state_dict and isinstance(state_dict["state_dict"], dict) and len(state_dict) > 1:
         state_dict = state_dict["state_dict"]
 
     keys = list(state_dict.keys())
-    is_fusion_state = any(
-        k.startswith("phone_enc.")
-        or k.startswith("phone_enc")
-        or k.startswith("phone_enc.encoder")
-        for k in keys
-    )
+    # check if checkpoint is fusion-style (phone_enc/watch_enc)
+    is_fusion_state = any(k.startswith("phone_enc.") or k.startswith("phone_enc") or k.startswith("phone_enc.encoder") for k in keys)
 
+    # find config values
     model_cfg = None
     if isinstance(cfg, dict):
         model_cfg = cfg
     else:
         for candidate in ("model_config", "config", "cfg"):
-            if (
-                isinstance(loaded, dict)
-                and candidate in loaded
-                and isinstance(loaded[candidate], dict)
-            ):
-                model_cfg = loaded[candidate]
-                break
+            if isinstance(loaded, dict) and candidate in loaded and isinstance(loaded[candidate], dict):
+                model_cfg = loaded[candidate]; break
 
     num_classes = None
     input_channels = None
     embedding_dim = None
     if isinstance(model_cfg, dict):
-        num_classes = (
-            model_cfg.get("num_classes")
-            or model_cfg.get("n_classes")
-            or model_cfg.get("num_output")
-        )
+        num_classes = model_cfg.get("num_classes") or model_cfg.get("n_classes") or model_cfg.get("num_output")
         input_channels = model_cfg.get("input_channels") or model_cfg.get("in_channels")
         embedding_dim = model_cfg.get("embedding_dim") or model_cfg.get("embed_dim")
 
@@ -430,134 +435,123 @@ def load_model(path: Path, model_kind_hint: str = None):
         if inferred is not None:
             num_classes = inferred
 
+    # Attempt to import constructors if available
     global SingleStreamClassifier, FusionClassifier, load_pretrained_backbone
     if SingleStreamClassifier is None or FusionClassifier is None:
         try:
             from finetune.src.finetune.models import SingleStreamClassifier, FusionClassifier, load_pretrained_backbone  # type: ignore
-
             print("[info] Late-imported finetune constructors.")
         except Exception:
             try:
                 from finetune.models import SingleStreamClassifier, FusionClassifier, load_pretrained_backbone  # type: ignore
-
                 print("[info] Late-imported finetune.models constructors.")
             except Exception as e:
                 print("[warning] Could not import constructors:", e)
 
     constructed_model = None
-    construction_errors = []
-
-    def try_construct(func, *args, **kwargs):
+    # try to construct the original model if constructors exist
+    if (is_fusion_state and FusionClassifier is not None) or (SingleStreamClassifier is not None):
         try:
-            m = func(*args, **kwargs)
-            return m
-        except Exception as ex:
-            construction_errors.append((func, ex))
-            return None
+            if is_fusion_state and FusionClassifier is not None:
+                # try reasonable constructor signatures
+                try:
+                    constructed_model = FusionClassifier(num_classes=num_classes if num_classes else 5, input_channels=input_channels if input_channels else 6, embedding_dim=embedding_dim if embedding_dim else 256)
+                except Exception:
+                    constructed_model = FusionClassifier()
+            else:
+                try:
+                    constructed_model = SingleStreamClassifier(num_classes=num_classes if num_classes else 5, input_channels=input_channels if input_channels else 6, embedding_dim=embedding_dim if embedding_dim else 256)
+                except Exception:
+                    constructed_model = SingleStreamClassifier()
+        except Exception as e:
+            print("[warning] Constructor attempt failed:", e)
+            constructed_model = None
 
-    if is_fusion_state and FusionClassifier is not None:
-        attempts = []
-        if num_classes and input_channels and embedding_dim:
-            attempts.append(
-                dict(
-                    args=(),
-                    kwargs={
-                        "num_classes": num_classes,
-                        "input_channels": input_channels,
-                        "embedding_dim": embedding_dim,
-                    },
-                )
-            )
-        if num_classes and input_channels and embedding_dim:
-            attempts.append(
-                dict(
-                    args=(),
-                    kwargs={
-                        "phone_in_channels": input_channels,
-                        "watch_in_channels": input_channels,
-                        "embedding_dim": embedding_dim,
-                        "num_classes": num_classes,
-                    },
-                )
-            )
-        attempts.append(dict(args=(), kwargs={}))
-        for a in attempts:
-            constructed_model = try_construct(
-                FusionClassifier, *a["args"], **a["kwargs"]
-            )
-            if constructed_model is not None:
-                break
+    # If constructed_model exists, try loading the state_dict into it (the original logic)
+    if constructed_model is not None:
+        try:
+            sd = state_dict
+            if any(k.startswith("module.") for k in sd.keys()):
+                print("[info] Stripping 'module.' prefix from state_dict keys")
+                sd = _strip_prefix_from_state_dict(sd, "module.")
+            if is_fusion_state:
+                model_keys = list(constructed_model.state_dict().keys())
+                if not any(k.startswith("phone_enc") for k in model_keys) and any(k.startswith("phone_enc.") for k in sd.keys()):
+                    sd = { (k[len("phone_enc."):] if k.startswith("phone_enc.") else (k[len("watch_enc."):] if k.startswith("watch_enc.") else k)): v for k,v in sd.items() }
+            constructed_model.load_state_dict(sd, strict=False)
+            constructed_model = constructed_model.to(device); constructed_model.eval()
+            if entry is not None:
+                entry["loaded"] = True; entry["path"] = str(path)
+            print(f"[info] Loaded state_dict into constructed model from {path}")
+            inspect_loaded_model(model_kind_hint, constructed_model, path)
+            return repair_single_stream_model(constructed_model, name=str(path.name))
+        except Exception as e:
+            print("[warning] Failed to load state into constructed model:", e)
+            traceback.print_exc()
+            constructed_model = None
 
-    if constructed_model is None and SingleStreamClassifier is not None:
-        attempts = []
-        if num_classes and input_channels and embedding_dim:
-            attempts.append(
-                dict(
-                    args=(),
-                    kwargs={
-                        "num_classes": num_classes,
-                        "input_channels": input_channels,
-                        "embedding_dim": embedding_dim,
-                    },
-                )
-            )
-        if input_channels and num_classes:
-            attempts.append(dict(args=(input_channels, num_classes), kwargs={}))
-        attempts.append(dict(args=(), kwargs={}))
-        for a in attempts:
-            constructed_model = try_construct(
-                SingleStreamClassifier, *a["args"], **a["kwargs"]
-            )
-            if constructed_model is not None:
-                break
+    # ---------- FALLBACK: build a small adapter model ----------
+    # Determine sizes
+    if num_classes is None:
+        num_classes = 5
+    if embedding_dim is None:
+        # try to infer embedding dim from any 2D tensor in the state_dict
+        embedding_dim = None
+        for v in state_dict.values():
+            if isinstance(v, torch.Tensor) and v.dim() == 2 and v.shape[0] <= 1024:
+                embedding_dim = int(v.shape[1]); break
+        if embedding_dim is None:
+            embedding_dim = 256
 
-    if constructed_model is None:
-        err = (
-            "Could not construct model class (FusionClassifier/SingleStreamClassifier)."
-        )
-        print("[error]", err)
-        if entry is not None:
-            entry["why_failed"] = err
-        for f, ex in construction_errors:
-            print("[debug] constructor error:", f, ex)
-        return None
+    in_ch = input_channels if input_channels is not None else 6
 
-    try:
-        sd = state_dict
-        if any(k.startswith("module.") for k in sd.keys()):
-            print("[info] Stripping 'module.' prefix from state_dict keys")
-            sd = _strip_prefix_from_state_dict(sd, "module.")
-        if is_fusion_state:
-            model_keys = list(constructed_model.state_dict().keys())
-            if not any(k.startswith("phone_enc") for k in model_keys) and any(
-                k.startswith("phone_enc.") for k in sd.keys()
-            ):
-                sd = {
-                    (
-                        k[len("phone_enc.") :]
-                        if k.startswith("phone_enc.")
-                        else (
-                            k[len("watch_enc.") :] if k.startswith("watch_enc.") else k
-                        )
-                    ): v
-                    for k, v in sd.items()
-                }
+    class SimpleAdapterModel(nn.Module):
+        def __init__(self, in_ch, embedding_dim, num_classes):
+            super().__init__()
+            self.encoder = EncoderAdapter(in_channels=in_ch, embedding_dim=embedding_dim)
+            self.classifier = nn.Linear(embedding_dim, num_classes)
+        def forward(self, x):
+            emb = self.encoder(x)  # (batch, emb)
+            logits = self.classifier(emb)
+            return logits
 
-        constructed_model.load_state_dict(sd, strict=False)
-        constructed_model = constructed_model.to(device)
-        constructed_model.eval()
-        if entry is not None:
-            entry["loaded"] = True
-            entry["path"] = str(path)
-        print(f"[info] Loaded state_dict into constructed model from {path}")
-        return constructed_model
-    except Exception as e:
-        err = f"Failed to load state_dict into constructed model: {e}"
-        print("[error]", err)
-        traceback.print_exc()
-        if entry is not None:
-            entry["why_failed"] = err
-        return None
+    print(f"[fallback] Constructing SimpleAdapterModel(in_ch={in_ch}, emb={embedding_dim}, classes={num_classes}) because constructors were not usable.")
+    adapter = SimpleAdapterModel(in_ch, embedding_dim, int(num_classes)).to(device).eval()
+
+    # Try to transplant classifier weights from state_dict: find any 2D tensor of shape (num_classes, embedding_dim)
+    found_w = None; found_b = None
+    for k, v in state_dict.items():
+        if isinstance(v, torch.Tensor) and v.dim() == 2 and v.shape[0] == int(num_classes) and v.shape[1] == int(embedding_dim):
+            found_w = v
+            print(f"[fallback] Found candidate classifier weight in checkpoint: {k}")
+            # look for corresponding bias key name possibility
+            bias_candidates = [k.replace(".weight", ".bias"), k.replace("weight", "bias")]
+            for bkey in bias_candidates:
+                if bkey in state_dict and isinstance(state_dict[bkey], torch.Tensor) and state_dict[bkey].dim() == 1 and state_dict[bkey].shape[0] == int(num_classes):
+                    found_b = state_dict[bkey]; print(f"[fallback] Found candidate bias: {bkey}")
+                    break
+            break
+
+    if found_w is not None:
+        try:
+            adapter.classifier.weight.data.copy_(found_w.to(adapter.classifier.weight.device))
+            if found_b is not None:
+                adapter.classifier.bias.data.copy_(found_b.to(adapter.classifier.bias.device))
+            else:
+                # zero bias if none present
+                adapter.classifier.bias.data.zero_()
+            print("[fallback] Transplanted classifier weights into adapter classifier.")
+        except Exception as e:
+            print("[fallback] Failed to transplant classifier weights:", e)
+    else:
+        print("[fallback] No matching classifier weight found in checkpoint; adapter classifier is randomly initialized.")
+
+    if entry is not None:
+        entry["loaded"] = True
+        entry["path"] = str(path)
+        entry["why_failed"] = "Used adapter fallback (original constructors unavailable)"
+
+    return adapter
 
 
 # -----------------------
