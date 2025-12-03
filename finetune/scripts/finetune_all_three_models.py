@@ -695,7 +695,8 @@ def build_label_matched_pairs(phone_data, watch_data, seed=42):
 # -------------------------
 
 def run_grid_search_for_model(model_type, phone_data, watch_data, phone_ckpt, watch_ckpt,
-                              output_dir, device, param_grid, max_runs=100):
+                              output_dir, device, param_grid, max_runs=100, export_torchscript=False):
+
     """
     model_type: 'phone', 'watch', 'fusion'
     param_grid: dict with lists: {'lr':[], 'batch_size':[], 'dropout':[], 'strategy':[]}
@@ -816,6 +817,7 @@ def run_grid_search_for_model(model_type, phone_data, watch_data, phone_ckpt, wa
         metrics_csv = run_dir / "epoch_metrics.csv"
         metrics_df.to_csv(metrics_csv, index=False)
         # Save model best state
+                # Save model best state (existing state_dict checkpoint)
         if best_state is not None:
             ckpt_path = run_dir / "best_model.pth"
             torch.save({
@@ -823,6 +825,7 @@ def run_grid_search_for_model(model_type, phone_data, watch_data, phone_ckpt, wa
                 'params': params,
                 'model_type': model_type
             }, ckpt_path)
+
         # Evaluate on test set using loaded best_state model
         test_f1, test_report = 0.0, "No best_state"
         test_acc = 0.0
@@ -838,19 +841,48 @@ def run_grid_search_for_model(model_type, phone_data, watch_data, phone_ckpt, wa
                 backbone_phone = load_pretrained_backbone(phone_ckpt, device=device)
                 backbone_watch = load_pretrained_backbone(watch_ckpt, device=device)
                 eval_model = FusionClassifier(backbone_phone, backbone_watch, num_classes=5, dropout=dropout).to(device)
+
             eval_model.load_state_dict(best_state)
+            eval_model.eval()
+
+            # compute test metrics
             if model_type == 'fusion':
-                # use compute_metrics_epoch to get accuracy & f1 easily
                 test_metrics = compute_metrics_epoch(eval_model, test_loader, device, is_fusion=True)
                 test_f1 = test_metrics['f1']
                 test_acc = test_metrics['acc']
-                # keep the classification report as well for detail (optional)
                 _, test_report = evaluate_model(eval_model, test_loader, device, is_fusion=True)
             else:
                 test_metrics = compute_metrics_epoch(eval_model, test_loader, device, is_fusion=False)
                 test_f1 = test_metrics['f1']
                 test_acc = test_metrics['acc']
                 _, test_report = evaluate_model(eval_model, test_loader, device, is_fusion=False)
+
+            # ---- NEW: Save the full nn.Module object (so your dashboard can torch.load it directly) ----
+            try:
+                # Move model to CPU before saving to improve portability
+                eval_model_cpu = eval_model.to('cpu')
+                full_model_path = Path(output_dir) / f"{model_type}_classifier.pth"
+                torch.save(eval_model_cpu, full_model_path)
+                print(f"[SAVE] Full model saved for deployment at: {full_model_path}")
+
+                # Optionally export TorchScript if requested (portable, no class defs required at load time)
+                if export_torchscript:
+                    try:
+                        if model_type in ('phone', 'watch'):
+                            example_in = torch.randn(1, 6, 150)
+                            traced = torch.jit.trace(eval_model_cpu, example_in)
+                        else:
+                            example_in = (torch.randn(1, 6, 150), torch.randn(1, 6, 150))
+                            traced = torch.jit.trace(eval_model_cpu, example_in)
+                        ts_path = Path(output_dir) / f"{model_type}_classifier.pt"
+                        traced.save(str(ts_path))
+                        print(f"[SAVE] TorchScript model exported at: {ts_path}")
+                    except Exception as e:
+                        print(f"[WARN] TorchScript export failed for {model_type}: {e}")
+
+            except Exception as e:
+                print(f"[ERROR] Saving full model for {model_type} failed: {e}")
+                traceback.print_exc()
         else:
             test_f1, test_report, test_acc = 0.0, "No best_state", 0.0
 
@@ -891,6 +923,8 @@ def main():
     parser.add_argument("--output_dir", required=True, help="Output directory")
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--max_search_runs", type=int, default=50, help="Maximum number of grid-search runs per model")
+    parser.add_argument("--export_torchscript", action="store_true", help="Also export a TorchScript (.pt) model for deployment")
+    
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)
@@ -915,15 +949,18 @@ def main():
     # Run grid search for phone
     print("\nStarting grid search for PHONE-only model...")
     best_phone = run_grid_search_for_model('phone', phone_data, watch_data, args.phone_ckpt, args.watch_ckpt,
-                                          output_dir, args.device, param_grid, max_runs=args.max_search_runs)
+                                          output_dir, args.device, param_grid, max_runs=args.max_search_runs,
+                                          export_torchscript=args.export_torchscript)
     # Run grid search for watch
     print("\nStarting grid search for WATCH-only model...")
     best_watch = run_grid_search_for_model('watch', phone_data, watch_data, args.phone_ckpt, args.watch_ckpt,
-                                          output_dir, args.device, param_grid, max_runs=args.max_search_runs)
+                                          output_dir, args.device, param_grid, max_runs=args.max_search_runs,
+                                          export_torchscript=args.export_torchscript)
     # Run grid search for fusion
     print("\nStarting grid search for FUSION model...")
     best_fusion = run_grid_search_for_model('fusion', phone_data, watch_data, args.phone_ckpt, args.watch_ckpt,
-                                           output_dir, args.device, param_grid, max_runs=args.max_search_runs)
+                                           output_dir, args.device, param_grid, max_runs=args.max_search_runs,
+                                           export_torchscript=args.export_torchscript)
 
     summary = {
         'best_phone': best_phone,
