@@ -101,6 +101,45 @@ gyro_cache = {"phone": make_deque(2000), "watch": make_deque(2000)}
 
 sample_counts = {"phone": 0, "watch": 0}
 
+
+
+# -----------------------
+# Running per-device normalization stats (Welford)
+# -----------------------
+MIN_STATS_SAMPLES = 500  # number of samples before using running stats (tune as needed)
+
+device_stats = {
+    "phone": {"n": 0, "mean": np.zeros(6, dtype=np.float64), "M2": np.zeros(6, dtype=np.float64)},
+    "watch": {"n": 0, "mean": np.zeros(6, dtype=np.float64), "M2": np.zeros(6, dtype=np.float64)},
+}
+
+def update_running_stats(role: str, vec6: np.ndarray):
+    """
+    vec6: numpy array shape (6,) -> [ax,ay,az,gx,gy,gz]
+    Updates Welford running mean and M2 (for variance).
+    """
+    try:
+        s = device_stats.get(role)
+        if s is None:
+            return
+        x = vec6.astype(np.float64)
+        n = s["n"] + 1
+        delta = x - s["mean"]
+        mean = s["mean"] + delta / n
+        delta2 = x - mean
+        M2 = s["M2"] + delta * delta2
+        s["n"] = n
+        s["mean"] = mean
+        s["M2"] = M2
+        # optional: print when threshold reached
+        if n == MIN_STATS_SAMPLES:
+            std = np.sqrt(np.maximum(M2 / max(1, n - 1), 1e-8))
+            print(f"[stats] {role} running stats ready (n={n}) mean={mean.tolist()} std={std.tolist()}")
+    except Exception as e:
+        print("[WARN] update_running_stats error:", e)
+
+
+
 phone_predictions = make_deque(MAX_DATA_POINTS)
 watch_predictions = make_deque(MAX_DATA_POINTS)
 fusion_predictions = make_deque(MAX_DATA_POINTS)
@@ -346,10 +385,31 @@ def identify_device(device_string: str):
     return "phone"
 
 
-def normalize_window(window):
-    mean = window.mean(axis=1, keepdims=True)
-    std = window.std(axis=1, keepdims=True) + 1e-8
-    return (window - mean) / std
+def normalize_window(window, role=None):
+    """
+    If role has running device stats and enough samples, use per-device normalization
+    (matching training's per-subject normalization). Otherwise fall back to per-window zscore.
+    window: numpy array shape (6, WINDOW_SIZE)
+    role: 'phone' or 'watch' or None
+    """
+    try:
+        # use device stats if available
+        if role in device_stats and device_stats[role]["n"] >= MIN_STATS_SAMPLES:
+            s = device_stats[role]
+            mean = s["mean"].reshape(6, 1)
+            # sample variance (Bessel) fallback when n<2 -> tiny eps
+            var = (s["M2"] / max(1, (s["n"] - 1))).reshape(6, 1)
+            std = np.sqrt(np.maximum(var, 1e-8))
+            return (window - mean) / std
+        # fallback: per-window normalization (previous behavior)
+        mean = window.mean(axis=1, keepdims=True)
+        std = window.std(axis=1, keepdims=True) + 1e-8
+        return (window - mean) / std
+    except Exception as e:
+        print("[WARN] normalize_window failed:", e)
+        # last-resort return original window
+        return window
+
 
 
 def create_window_from_buffer(buffer):
@@ -834,7 +894,7 @@ def predict_phone(window):
         )
     try:
         with torch.no_grad():
-            norm_win = normalize_window(window)
+            norm_win = normalize_window(window, role='phone')
             t = window_to_tensor(norm_win).to(device)  # (1,6,W)
             phone_model.eval()
             outputs = phone_model(t)  # tensor
@@ -864,7 +924,7 @@ def predict_watch(window):
         )
     try:
         with torch.no_grad():
-            norm_win = normalize_window(window)
+            norm_win = normalize_window(window, role='watch')
             t = window_to_tensor(norm_win).to(device)
             watch_model.eval()
             outputs = watch_model(t)
@@ -892,8 +952,9 @@ def predict_fusion(phone_window, watch_window):
         )
     try:
         with torch.no_grad():
-            p_norm = normalize_window(phone_window)
-            w_norm = normalize_window(watch_window)
+            p_norm = normalize_window(phone_window, role='phone')
+            w_norm = normalize_window(watch_window, role='watch')
+
             tp = window_to_tensor(p_norm).to(device)
             tw = window_to_tensor(w_norm).to(device)
             fusion_model.eval()
@@ -1230,9 +1291,12 @@ def data():
                                 "timestamp": ts,
                             }
                             watch_buffer.append(sample)
+                            # update running stats with sample vector [ax,ay,az,gx,gy,gz]
+                            update_running_stats("watch", np.array([sample["ax"], sample["ay"], sample["az"], sample["gx"], sample["gy"], sample["gz"]], dtype=np.float64))
                             sample_counts["watch"] += 1
                             if sample_counts["watch"] % STEP_SIZE_RT == 0:
                                 call_predict = True
+
                     elif name == "accelerometer":
                         vals = d.get("values", {})
                         ax = float(
@@ -1287,9 +1351,11 @@ def data():
                                 "timestamp": ts,
                             }
                             phone_buffer.append(sample)
+                            update_running_stats("phone", np.array([sample["ax"], sample["ay"], sample["az"], sample["gx"], sample["gy"], sample["gz"]], dtype=np.float64))
                             sample_counts["phone"] += 1
                             if sample_counts["phone"] % STEP_SIZE_RT == 0:
                                 call_predict = True
+
                     elif name == "gyroscope":
                         vals = d.get("values", {})
                         gx = float(
