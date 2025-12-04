@@ -1,3 +1,39 @@
+Incoming: wrist motion device: None
+Incoming: wrist motion device: None
+Incoming: wrist motion device: None
+Incoming: wrist motion device: None
+Incoming: wrist motion device: None
+Incoming: wrist motion device: None
+Incoming: wrist motion device: None
+Incoming: wrist motion device: None
+Incoming: accelerometeruncalibrated device: None
+Incoming: gyroscopeuncalibrated device: None
+Incoming: gyroscope device: None
+Incoming: accelerometer device: None
+Incoming: gyroscopeuncalibrated device: None
+Incoming: accelerometeruncalibrated device: None
+Incoming: gyroscope device: None
+Incoming: accelerometer device: None
+Incoming: gyroscopeuncalibrated device: None
+Incoming: accelerometeruncalibrated device: None
+Incoming: gyroscope device: None
+Incoming: accelerometer device: None
+Incoming: gyroscopeuncalibrated device: None
+Incoming: accelerometeruncalibrated device: None
+Incoming: gyroscope device: None
+Incoming: accelerometer device: None
+Incoming: gyroscopeuncalibrated device: None
+Incoming: accelerometeruncalibrated device: None
+Incoming: gyroscope device: None
+Incoming: accelerometer device: None
+Incoming: gyroscopeuncalibrated device: None
+Incoming: accelerometeruncalibrated device: None
+Incoming: gyroscope device: None
+Incoming: accelerometer device: None
+Incoming: gyroscopeuncalibrated device: None
+Incoming: accelerometeruncalibrated device: None
+Incoming: gyroscope device: None
+Incoming: accelerometer device: None
 Incoming: gyroscopeuncalibrated device: None
 Incoming: accelerometeruncalibrated device: None
 Incoming: gyroscope device: None
@@ -5,122 +41,22 @@ Incoming: accelerometer device: None
 Incoming: gyroscopeuncalibrated device: None
 [ERROR] predict_phone: Numpy is not available
 Traceback (most recent call last):
-  File "/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/model_load_4_waveforms.py", line 397, in predict_phone
-    torch.from_numpy(normalize_window(window))
+  File "/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/model_load_4_waveforms.py", line 434, in predict_phone
+    probs = torch.softmax(outputs, dim=1).cpu().numpy()[0]
 RuntimeError: Numpy is not available
-[phone_pred] 2025-12-03T18:09:18.405642 -> Error (phone_buf=7875)
+[phone_pred] 2025-12-03T18:17:27.096262 -> Error (phone_buf=4847)
 [ERROR] predict_watch: Numpy is not available
 Traceback (most recent call last):
-  File "/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/model_load_4_waveforms.py", line 423, in predict_watch
-    torch.from_numpy(normalize_window(window))
+  File "/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/model_load_4_waveforms.py", line 456, in predict_watch
+    probs = torch.softmax(outputs, dim=1).cpu().numpy()[0]
 RuntimeError: Numpy is not available
-[watch_pred] 2025-12-03T18:09:18.406240 -> Error (watch_buf=3978)
+[watch_pred] 2025-12-03T18:17:27.101009 -> Error (watch_buf=2448)
 [ERROR] predict_fusion: Numpy is not available
 Traceback (most recent call last):
-  File "/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/model_load_4_waveforms.py", line 448, in predict_fusion
-    torch.from_numpy(normalize_window(phone_window))
+  File "/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/model_load_4_waveforms.py", line 480, in predict_fusion
+    probs = torch.softmax(outputs, dim=1).cpu().numpy()[0]
 RuntimeError: Numpy is not available
-[fusion] 2025-12-03T18:09:18.405153 fusion_pred=Error (phone_buf=7875 watch_buf=3978)
-10.105.194.227 - - [03/Dec/2025 18:09:18] "POST /data HTTP/1.1" 200 -
+[fusion] 2025-12-03T18:17:27.091160 fusion_pred=Error (phone_buf=4847 watch_buf=2448)
+10.105.194.227 - - [03/Dec/2025 18:17:27] "POST /data HTTP/1.1" 200 -
+127.0.0.1 - - [03/Dec/2025 18:17:27] "POST /_dash-update-component HTTP/1.1" 200 -
 Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-Incoming: accelerometeruncalibrated device: None
-Incoming: gyroscope device: None
-Incoming: accelerometer device: None
-Incoming: gyroscopeuncalibrated device: None
-
-{"both_ready_flag":true,"cwd":"/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach","last_both_ready_time":"2025-12-03T18:11:01.260599","last_phone_sample_ts":"2025-12-03T18:12:10.468831","last_prediction_time":"2025-12-03T18:12:10.200844","last_watch_sample_ts":"2025-12-03T18:12:10.079085","models":{"fusion":{"id":4456380496,"is_loaded":true,"path":"/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/finetune/models/dashboard_models/fusion_classifier_full.pth","repr":"FusionClassifier(\n  (phone_enc): ConvNetBackbone(\n    (encoder): Sequential(\n      (0): ConvBlock(\n        (conv): Conv1d(6, 64, kernel_size=(5,), stride=(1,), padding=(2,), bias=False)\n        (bn): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)\n        (act): ReLU(inplace=True)\n        (dropout): Dropout(p=0.1, inplace=False)\n        (shortcut): Sequential(\n     ","type":"<class 'finetune.models.FusionClassifier'>"},"phone":{"id":4455842864,"is_loaded":true,"path":"/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/finetune/models/dashboard_models/phone_classifier_full.pth","repr":"SingleStreamClassifier(\n  (encoder): ConvNetBackbone(\n    (encoder): Sequential(\n      (0): ConvBlock(\n        (conv): Conv1d(6, 64, kernel_size=(5,), stride=(1,), padding=(2,), bias=False)\n        (bn): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)\n        (act): ReLU(inplace=True)\n        (dropout): Dropout(p=0.1, inplace=False)\n        (shortcut): Sequential(\n ","type":"<class 'finetune.models.SingleStreamClassifier'>"},"watch":{"id":4456314912,"is_loaded":true,"path":"/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/finetune/models/dashboard_models/watch_classifier_full.pth","repr":"SingleStreamClassifier(\n  (encoder): ConvNetBackbone(\n    (encoder): Sequential(\n      (0): ConvBlock(\n        (conv): Conv1d(6, 64, kernel_size=(5,), stride=(1,), padding=(2,), bias=False)\n        (bn): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)\n        (act): ReLU(inplace=True)\n        (dropout): Dropout(p=0.1, inplace=False)\n        (shortcut): Sequential(\n ","type":"<class 'finetune.models.SingleStreamClassifier'>"}},"phone_buffer_len":14339,"pid":79559,"platform":"macOS-14.2.1-x86_64-i386-64bit","python_executable":"/Users/nandinivenkatesh/Desktop/cs496/Campus_Life_Coach/.venv/bin/python","recent_device_strings":["None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None","None"],"recent_events_count":50,"recent_events_sample":[{"raw":{"name":"accelerometer","time":1764807130448879400,"values":{"x":-0.0003181580045027658,"y":-0.01264832304045558,"z":0.0452870024472475}},"received_at":"2025-12-03T18:12:11.634540"},{"raw":{"name":"gyroscopeuncalibrated","time":1764807130458855700,"values":{"x":-0.004671450704336166,"y":0.00019094864546786994,"z":-4.846953015658073e-05}},"received_at":"2025-12-03T18:12:11.634564"},{"raw":{"name":"accelerometeruncalibrated","time":1764807130458855700,"values":{"x":-0.0031585693359375,"y":-0.0207366943359375,"z":-0.99578857421875}},"received_at":"2025-12-03T18:12:11.634580"},{"raw":{"name":"gyroscope","time":1764807130458855700,"values":{"x":0.00014162017032504082,"y":-0.00013108989514876157,"z":0.00016631688049528748}},"received_at":"2025-12-03T18:12:11.634594"},{"raw":{"name":"accelerometer","time":1764807130458855700,"values":{"x":-0.001834179457486607,"y":-0.015194043734204023,"z":0.03945113590061664}},"received_at":"2025-12-03T18:12:11.634612"},{"raw":{"name":"gyroscopeuncalibrated","time":1764807130468830500,"values":{"x":-0.004341219086199999,"y":-7.243797881528735e-05,"z":0.0005278385360725224}},"received_at":"2025-12-03T18:12:11.634651"},{"raw":{"name":"accelerometeruncalibrated","time":1764807130468830500,"values":{"x":-0.00299072265625,"y":-0.0203704833984375,"z":-0.9938812255859375}},"received_at":"2025-12-03T18:12:11.634670"},{"raw":{"name":"gyroscope","time":1764807130468830500,"values":{"x":0.00047185178846120834,"y":-0.00039447651943191886,"z":0.0007426249794661999}},"received_at":"2025-12-03T18:12:11.634690"},{"raw":{"name":"accelerometer","time":1764807130468830500,"values":{"x":-0.00018404219686053692,"y":-0.01156988015398383,"z":0.05815525184869766}},"received_at":"2025-12-03T18:12:11.634735"},{"raw":{"name":"gyroscopeuncalibrated","time":1764807130478806500,"values":{"x":-0.004999818746000528,"y":-0.0008420915110036731,"z":-0.0015366439474746585}},"received_at":"2025-12-03T18:12:11.634843"}],"sample_counts":{"phone":14339,"watch":7140},"timestamp":"2025-12-03T18:12:11.680501","watch_buffer_len":7140}
