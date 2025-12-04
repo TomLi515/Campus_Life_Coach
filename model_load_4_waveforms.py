@@ -125,6 +125,7 @@ print(f"Using device: {device}")
 
 MODEL_DIR = ROOT / "finetune" / "models" / "dashboard_models"
 
+
 def load_model(path: Path) -> typing.Optional[torch.nn.Module]:
     """
     Try to load model robustly:
@@ -175,21 +176,30 @@ def load_model(path: Path) -> typing.Optional[torch.nn.Module]:
             # common keys that indicate state_dict
             for k in ("model_state_dict", "state_dict", "model_state"):
                 if k in loaded:
-                    print(f"[load_model] Found '{k}' in checkpoint from {path} (state dict).")
+                    print(
+                        f"[load_model] Found '{k}' in checkpoint from {path} (state dict)."
+                    )
                     # To load this into a model class we need to instantiate the appropriate class
                     # We cannot reliably infer class here — return dict and print instruction
-                    print("  -> This is a state_dict. To load it, instantiate the model class (SingleStreamClassifier or FusionClassifier) and call load_state_dict(...).")
+                    print(
+                        "  -> This is a state_dict. To load it, instantiate the model class (SingleStreamClassifier or FusionClassifier) and call load_state_dict(...)."
+                    )
                     return None
             # otherwise print keys for debugging
-            print(f"[load_model] torch.load returned a dict with keys: {list(loaded.keys())[:10]}...")
+            print(
+                f"[load_model] torch.load returned a dict with keys: {list(loaded.keys())[:10]}..."
+            )
             return None
 
-        print(f"[load_model] torch.load returned unexpected object of type {type(loaded)}")
+        print(
+            f"[load_model] torch.load returned unexpected object of type {type(loaded)}"
+        )
         return None
     except Exception as e:
         print(f"[load_model] Failed to load {path}: {e}")
         traceback.print_exc()
         return None
+
 
 # Try to find the model files (supports both names - full or plain)
 phone_candidates = [
@@ -211,12 +221,14 @@ fusion_candidates = [
     MODEL_DIR / "fusion.pt",
 ]
 
+
 def try_candidates(cands):
     for p in cands:
         m = load_model(p)
         if m is not None:
             return m, p
     return None, None
+
 
 phone_model, phone_model_path = try_candidates(phone_candidates)
 watch_model, watch_model_path = try_candidates(watch_candidates)
@@ -227,8 +239,10 @@ print("  Phone:", bool(phone_model), phone_model_path)
 print("  Watch:", bool(watch_model), watch_model_path)
 print("  Fusion:", bool(fusion_model), fusion_model_path)
 
+
 def is_model_loaded(m):
     return isinstance(m, torch.nn.Module)
+
 
 # -----------------------
 # Utilities (same as before, with small debug prints)
@@ -241,23 +255,42 @@ def auto_prune_buffers():
     with buffer_lock:
         try:
             while len(phone_time_accel) > 0 and phone_time_accel[0] < cutoff_time:
-                phone_time_accel.popleft(); phone_accel_x.popleft(); phone_accel_y.popleft(); phone_accel_z.popleft()
+                phone_time_accel.popleft()
+                phone_accel_x.popleft()
+                phone_accel_y.popleft()
+                phone_accel_z.popleft()
             while len(phone_time_gyro) > 0 and phone_time_gyro[0] < cutoff_time:
-                phone_time_gyro.popleft(); phone_gyro_x.popleft(); phone_gyro_y.popleft(); phone_gyro_z.popleft()
+                phone_time_gyro.popleft()
+                phone_gyro_x.popleft()
+                phone_gyro_y.popleft()
+                phone_gyro_z.popleft()
             while len(watch_time_accel) > 0 and watch_time_accel[0] < cutoff_time:
-                watch_time_accel.popleft(); watch_accel_x.popleft(); watch_accel_y.popleft(); watch_accel_z.popleft()
+                watch_time_accel.popleft()
+                watch_accel_x.popleft()
+                watch_accel_y.popleft()
+                watch_accel_z.popleft()
             while len(watch_time_rot) > 0 and watch_time_rot[0] < cutoff_time:
-                watch_time_rot.popleft(); watch_rot_x.popleft(); watch_rot_y.popleft(); watch_rot_z.popleft()
+                watch_time_rot.popleft()
+                watch_rot_x.popleft()
+                watch_rot_y.popleft()
+                watch_rot_z.popleft()
             while len(phone_predictions) > 1000:
-                phone_predictions.popleft(); phone_probs.popleft()
+                phone_predictions.popleft()
+                phone_probs.popleft()
             while len(watch_predictions) > 1000:
-                watch_predictions.popleft(); watch_probs.popleft()
+                watch_predictions.popleft()
+                watch_probs.popleft()
             while len(fusion_predictions) > 1000:
-                fusion_predictions.popleft(); fusion_probs.popleft(); prediction_times.popleft()
+                fusion_predictions.popleft()
+                fusion_probs.popleft()
+                prediction_times.popleft()
         except Exception as e:
             print(f"[WARNING] Pruning error: {e}")
 
+
 import threading, time as time_module
+
+
 def pruning_worker():
     while True:
         try:
@@ -267,26 +300,57 @@ def pruning_worker():
         except Exception as e:
             print(f"[ERROR] Pruning worker failed: {e}")
 
+
 def identify_device(device_string: str):
     if not device_string:
         return "phone"
     s = device_string.lower()
-    phone_keywords = ["phone","mobile","pixel","galaxy","iphone","android","oneplus","sm-g","redmi","xiaomi","mi"]
-    watch_keywords = ["watch","wrist","fitbit","applewatch","apple watch","garmin","mi band","wear","galaxywatch","tizen","sm-r","pixel_watch","pixel-watch"]
+    phone_keywords = [
+        "phone",
+        "mobile",
+        "pixel",
+        "galaxy",
+        "iphone",
+        "android",
+        "oneplus",
+        "sm-g",
+        "redmi",
+        "xiaomi",
+        "mi",
+    ]
+    watch_keywords = [
+        "watch",
+        "wrist",
+        "fitbit",
+        "applewatch",
+        "apple watch",
+        "garmin",
+        "mi band",
+        "wear",
+        "galaxywatch",
+        "tizen",
+        "sm-r",
+        "pixel_watch",
+        "pixel-watch",
+    ]
     for kw in watch_keywords:
         if kw in s:
             return "watch"
     for kw in phone_keywords:
         if kw in s:
             return "phone"
-    if "sm-r" in s: return "watch"
-    if "sm-g" in s: return "phone"
+    if "sm-r" in s:
+        return "watch"
+    if "sm-g" in s:
+        return "phone"
     return "phone"
+
 
 def normalize_window(window):
     mean = window.mean(axis=1, keepdims=True)
     std = window.std(axis=1, keepdims=True) + 1e-8
     return (window - mean) / std
+
 
 def create_window_from_buffer(buffer):
     if len(buffer) < WINDOW_SIZE:
@@ -304,6 +368,7 @@ def create_window_from_buffer(buffer):
         dtype=np.float32,
     )
     return window
+
 
 # Prediction functions with input-window debug
 #!/usr/bin/env python3
@@ -433,6 +498,7 @@ print(f"Using device: {device}")
 
 MODEL_DIR = ROOT / "finetune" / "models" / "dashboard_models"
 
+
 def load_model(path: Path) -> typing.Optional[torch.nn.Module]:
     """
     Try to load model robustly:
@@ -483,21 +549,30 @@ def load_model(path: Path) -> typing.Optional[torch.nn.Module]:
             # common keys that indicate state_dict
             for k in ("model_state_dict", "state_dict", "model_state"):
                 if k in loaded:
-                    print(f"[load_model] Found '{k}' in checkpoint from {path} (state dict).")
+                    print(
+                        f"[load_model] Found '{k}' in checkpoint from {path} (state dict)."
+                    )
                     # To load this into a model class we need to instantiate the appropriate class
                     # We cannot reliably infer class here — return dict and print instruction
-                    print("  -> This is a state_dict. To load it, instantiate the model class (SingleStreamClassifier or FusionClassifier) and call load_state_dict(...).")
+                    print(
+                        "  -> This is a state_dict. To load it, instantiate the model class (SingleStreamClassifier or FusionClassifier) and call load_state_dict(...)."
+                    )
                     return None
             # otherwise print keys for debugging
-            print(f"[load_model] torch.load returned a dict with keys: {list(loaded.keys())[:10]}...")
+            print(
+                f"[load_model] torch.load returned a dict with keys: {list(loaded.keys())[:10]}..."
+            )
             return None
 
-        print(f"[load_model] torch.load returned unexpected object of type {type(loaded)}")
+        print(
+            f"[load_model] torch.load returned unexpected object of type {type(loaded)}"
+        )
         return None
     except Exception as e:
         print(f"[load_model] Failed to load {path}: {e}")
         traceback.print_exc()
         return None
+
 
 # Try to find the model files (supports both names - full or plain)
 phone_candidates = [
@@ -519,12 +594,14 @@ fusion_candidates = [
     MODEL_DIR / "fusion.pt",
 ]
 
+
 def try_candidates(cands):
     for p in cands:
         m = load_model(p)
         if m is not None:
             return m, p
     return None, None
+
 
 phone_model, phone_model_path = try_candidates(phone_candidates)
 watch_model, watch_model_path = try_candidates(watch_candidates)
@@ -535,8 +612,10 @@ print("  Phone:", bool(phone_model), phone_model_path)
 print("  Watch:", bool(watch_model), watch_model_path)
 print("  Fusion:", bool(fusion_model), fusion_model_path)
 
+
 def is_model_loaded(m):
     return isinstance(m, torch.nn.Module)
+
 
 # -----------------------
 # Utilities (same as before, with small debug prints)
@@ -549,23 +628,42 @@ def auto_prune_buffers():
     with buffer_lock:
         try:
             while len(phone_time_accel) > 0 and phone_time_accel[0] < cutoff_time:
-                phone_time_accel.popleft(); phone_accel_x.popleft(); phone_accel_y.popleft(); phone_accel_z.popleft()
+                phone_time_accel.popleft()
+                phone_accel_x.popleft()
+                phone_accel_y.popleft()
+                phone_accel_z.popleft()
             while len(phone_time_gyro) > 0 and phone_time_gyro[0] < cutoff_time:
-                phone_time_gyro.popleft(); phone_gyro_x.popleft(); phone_gyro_y.popleft(); phone_gyro_z.popleft()
+                phone_time_gyro.popleft()
+                phone_gyro_x.popleft()
+                phone_gyro_y.popleft()
+                phone_gyro_z.popleft()
             while len(watch_time_accel) > 0 and watch_time_accel[0] < cutoff_time:
-                watch_time_accel.popleft(); watch_accel_x.popleft(); watch_accel_y.popleft(); watch_accel_z.popleft()
+                watch_time_accel.popleft()
+                watch_accel_x.popleft()
+                watch_accel_y.popleft()
+                watch_accel_z.popleft()
             while len(watch_time_rot) > 0 and watch_time_rot[0] < cutoff_time:
-                watch_time_rot.popleft(); watch_rot_x.popleft(); watch_rot_y.popleft(); watch_rot_z.popleft()
+                watch_time_rot.popleft()
+                watch_rot_x.popleft()
+                watch_rot_y.popleft()
+                watch_rot_z.popleft()
             while len(phone_predictions) > 1000:
-                phone_predictions.popleft(); phone_probs.popleft()
+                phone_predictions.popleft()
+                phone_probs.popleft()
             while len(watch_predictions) > 1000:
-                watch_predictions.popleft(); watch_probs.popleft()
+                watch_predictions.popleft()
+                watch_probs.popleft()
             while len(fusion_predictions) > 1000:
-                fusion_predictions.popleft(); fusion_probs.popleft(); prediction_times.popleft()
+                fusion_predictions.popleft()
+                fusion_probs.popleft()
+                prediction_times.popleft()
         except Exception as e:
             print(f"[WARNING] Pruning error: {e}")
 
+
 import threading, time as time_module
+
+
 def pruning_worker():
     while True:
         try:
@@ -575,26 +673,57 @@ def pruning_worker():
         except Exception as e:
             print(f"[ERROR] Pruning worker failed: {e}")
 
+
 def identify_device(device_string: str):
     if not device_string:
         return "phone"
     s = device_string.lower()
-    phone_keywords = ["phone","mobile","pixel","galaxy","iphone","android","oneplus","sm-g","redmi","xiaomi","mi"]
-    watch_keywords = ["watch","wrist","fitbit","applewatch","apple watch","garmin","mi band","wear","galaxywatch","tizen","sm-r","pixel_watch","pixel-watch"]
+    phone_keywords = [
+        "phone",
+        "mobile",
+        "pixel",
+        "galaxy",
+        "iphone",
+        "android",
+        "oneplus",
+        "sm-g",
+        "redmi",
+        "xiaomi",
+        "mi",
+    ]
+    watch_keywords = [
+        "watch",
+        "wrist",
+        "fitbit",
+        "applewatch",
+        "apple watch",
+        "garmin",
+        "mi band",
+        "wear",
+        "galaxywatch",
+        "tizen",
+        "sm-r",
+        "pixel_watch",
+        "pixel-watch",
+    ]
     for kw in watch_keywords:
         if kw in s:
             return "watch"
     for kw in phone_keywords:
         if kw in s:
             return "phone"
-    if "sm-r" in s: return "watch"
-    if "sm-g" in s: return "phone"
+    if "sm-r" in s:
+        return "watch"
+    if "sm-g" in s:
+        return "phone"
     return "phone"
+
 
 def normalize_window(window):
     mean = window.mean(axis=1, keepdims=True)
     std = window.std(axis=1, keepdims=True) + 1e-8
     return (window - mean) / std
+
 
 def create_window_from_buffer(buffer):
     if len(buffer) < WINDOW_SIZE:
@@ -613,72 +742,173 @@ def create_window_from_buffer(buffer):
     )
     return window
 
+
 # Prediction functions with input-window debug
-def predict_phone(window):
-    if window is None:
-        return "---", np.zeros(len(ACTIVITY_LABELS))
-    # debug: print window stats once in a while
+# -----------------------
+# Robust helper: ensure probability vector (NumPy-free)
+# -----------------------
+def _ensure_prob_vector(p):
+    """
+    Return a Python list of floats length == len(ACTIVITY_LABELS).
+    Tolerant to: list, tuple, numpy array-like, torch tensor, None.
+    Does not call .numpy() on tensors.
+    """
+    L = len(ACTIVITY_LABELS)
+    # Convert torch Tensor safely without calling .numpy()
     try:
-        if np.isnan(window).any() or np.isinf(window).any():
-            print("[predict_phone] window contains NaN/Inf")
-        if np.random.rand() < 0.01:
-            print(f"[predict_phone] window stats mean: {window.mean():.4f}, std: {window.std():.4f}, min:{window.min():.4f}, max:{window.max():.4f}")
+        import torch as _torch
+
+        if isinstance(p, _torch.Tensor):
+            p_list = _torch.flatten(p).cpu().detach().tolist()
+        else:
+            p_list = p
+    except Exception:
+        p_list = p
+
+    # Convert numpy arrays, lists, tuples to python list
+    try:
+        # numpy arrays have .tolist()
+        if hasattr(p_list, "tolist"):
+            p_list = p_list.tolist()
     except Exception:
         pass
 
+    if p_list is None:
+        return [0.0] * L
+
+    # Final normalization to list of floats
+    try:
+        if not isinstance(p_list, (list, tuple)):
+            # try to iterate
+            p_list = list(p_list)
+    except Exception:
+        # fallback
+        return [0.0] * L
+
+    # Convert elements to float and pad/truncate to L
+    out = [0.0] * L
+    for i in range(min(len(p_list), L)):
+        try:
+            out[i] = float(p_list[i])
+        except Exception:
+            out[i] = 0.0
+    return out
+
+
+# -----------------------
+# Helper: safe conversion of windows -> torch.Tensor (from previous patch)
+# -----------------------
+def window_to_tensor(window):
+    """
+    Convert a (6, WINDOW_SIZE) window (numpy array or nested list) into a torch.FloatTensor.
+    Returns tensor shaped (1, 6, WINDOW_SIZE) WITHOUT moving to device.
+    """
+    # Try fast zero-copy path first (may raise on some environments)
+    try:
+        t = torch.from_numpy(window).float()
+        return t.unsqueeze(0)
+    except Exception:
+        # Fallback to Python lists, then torch.tensor
+        try:
+            if hasattr(window, "tolist"):
+                pylist = window.tolist()
+            else:
+                pylist = [list(row) for row in window]
+        except Exception:
+            pylist = [[float(v) for v in row] for row in window]
+        return torch.tensor(pylist, dtype=torch.float32).unsqueeze(0)
+
+
+# -----------------------
+# Rewritten prediction functions (avoid tensor.numpy())
+# -----------------------
+def predict_phone(window):
+    if window is None:
+        return "---", [0.0] * len(ACTIVITY_LABELS)
     if not is_model_loaded(phone_model):
-        probs = np.random.dirichlet(np.ones(len(ACTIVITY_LABELS)))
-        return ACTIVITY_LABELS[np.argmax(probs)], probs
+        probs = np.random.dirichlet(np.ones(len(ACTIVITY_LABELS))).tolist()
+        probs = _ensure_prob_vector(probs)
+        return (
+            ACTIVITY_LABELS[int(max(range(len(probs)), key=lambda i: probs[i]))],
+            probs,
+        )
     try:
         with torch.no_grad():
-            x = torch.from_numpy(normalize_window(window)).unsqueeze(0).float().to(device)
-            outputs = phone_model(x)
-            probs = torch.softmax(outputs, dim=1).cpu().numpy()[0]
-            return ACTIVITY_LABELS[np.argmax(probs)], probs
+            norm_win = normalize_window(window)
+            t = window_to_tensor(norm_win).to(device)  # (1,6,W)
+            phone_model.eval()
+            outputs = phone_model(t)  # tensor
+            probs_list = (
+                torch.softmax(outputs, dim=1).cpu().detach().tolist()[0]
+            )  # list
+            probs = _ensure_prob_vector(probs_list)
+            return (
+                ACTIVITY_LABELS[int(max(range(len(probs)), key=lambda i: probs[i]))],
+                probs,
+            )
     except Exception as e:
-        print("phone prediction error:", e)
+        print("[ERROR] predict_phone:", e)
         traceback.print_exc()
-        return "Error", np.zeros(len(ACTIVITY_LABELS))
+        return "Error", [0.0] * len(ACTIVITY_LABELS)
+
 
 def predict_watch(window):
     if window is None:
-        return "---", np.zeros(len(ACTIVITY_LABELS))
-    try:
-        if np.random.rand() < 0.01:
-            print(f"[predict_watch] window stats mean: {window.mean():.4f}, std: {window.std():.4f}")
-    except Exception:
-        pass
+        return "---", [0.0] * len(ACTIVITY_LABELS)
     if not is_model_loaded(watch_model):
-        probs = np.random.dirichlet(np.ones(len(ACTIVITY_LABELS)))
-        return ACTIVITY_LABELS[np.argmax(probs)], probs
+        probs = np.random.dirichlet(np.ones(len(ACTIVITY_LABELS))).tolist()
+        probs = _ensure_prob_vector(probs)
+        return (
+            ACTIVITY_LABELS[int(max(range(len(probs)), key=lambda i: probs[i]))],
+            probs,
+        )
     try:
         with torch.no_grad():
-            x = torch.from_numpy(normalize_window(window)).unsqueeze(0).float().to(device)
-            outputs = watch_model(x)
-            probs = torch.softmax(outputs, dim=1).cpu().numpy()[0]
-            return ACTIVITY_LABELS[np.argmax(probs)], probs
+            norm_win = normalize_window(window)
+            t = window_to_tensor(norm_win).to(device)
+            watch_model.eval()
+            outputs = watch_model(t)
+            probs_list = torch.softmax(outputs, dim=1).cpu().detach().tolist()[0]
+            probs = _ensure_prob_vector(probs_list)
+            return (
+                ACTIVITY_LABELS[int(max(range(len(probs)), key=lambda i: probs[i]))],
+                probs,
+            )
     except Exception as e:
-        print("watch prediction error:", e)
+        print("[ERROR] predict_watch:", e)
         traceback.print_exc()
-        return "Error", np.zeros(len(ACTIVITY_LABELS))
+        return "Error", [0.0] * len(ACTIVITY_LABELS)
+
 
 def predict_fusion(phone_window, watch_window):
     if phone_window is None or watch_window is None:
-        return "---", np.zeros(len(ACTIVITY_LABELS))
+        return "---", [0.0] * len(ACTIVITY_LABELS)
     if not is_model_loaded(fusion_model):
-        probs = np.random.dirichlet(np.ones(len(ACTIVITY_LABELS)))
-        return ACTIVITY_LABELS[np.argmax(probs)], probs
+        probs = np.random.dirichlet(np.ones(len(ACTIVITY_LABELS))).tolist()
+        probs = _ensure_prob_vector(probs)
+        return (
+            ACTIVITY_LABELS[int(max(range(len(probs)), key=lambda i: probs[i]))],
+            probs,
+        )
     try:
         with torch.no_grad():
-            xp = torch.from_numpy(normalize_window(phone_window)).unsqueeze(0).float().to(device)
-            xw = torch.from_numpy(normalize_window(watch_window)).unsqueeze(0).float().to(device)
-            outputs = fusion_model(xp, xw)
-            probs = torch.softmax(outputs, dim=1).cpu().numpy()[0]
-            return ACTIVITY_LABELS[np.argmax(probs)], probs
+            p_norm = normalize_window(phone_window)
+            w_norm = normalize_window(watch_window)
+            tp = window_to_tensor(p_norm).to(device)
+            tw = window_to_tensor(w_norm).to(device)
+            fusion_model.eval()
+            outputs = fusion_model(tp, tw)
+            probs_list = torch.softmax(outputs, dim=1).cpu().detach().tolist()[0]
+            probs = _ensure_prob_vector(probs_list)
+            return (
+                ACTIVITY_LABELS[int(max(range(len(probs)), key=lambda i: probs[i]))],
+                probs,
+            )
     except Exception as e:
-        print("fusion prediction error:", e)
+        print("[ERROR] predict_fusion:", e)
         traceback.print_exc()
-        return "Error", np.zeros(len(ACTIVITY_LABELS))
+        return "Error", [0.0] * len(ACTIVITY_LABELS)
+
 
 # make_predictions remains essentially the same as your original
 def make_predictions():
@@ -724,29 +954,42 @@ def make_predictions():
 
     if phone_win is not None:
         phone_label, phone_p = predict_phone(phone_win)
-        print(f"[phone_pred] {datetime.now().isoformat()} -> {phone_label} (phone_buf={len(phone_buffer)})")
+        print(
+            f"[phone_pred] {datetime.now().isoformat()} -> {phone_label} (phone_buf={len(phone_buffer)})"
+        )
     if watch_win is not None:
         watch_label, watch_p = predict_watch(watch_win)
-        print(f"[watch_pred] {datetime.now().isoformat()} -> {watch_label} (watch_buf={len(watch_buffer)})")
+        print(
+            f"[watch_pred] {datetime.now().isoformat()} -> {watch_label} (watch_buf={len(watch_buffer)})"
+        )
     if phone_win is not None and watch_win is not None:
         fusion_label, fusion_p = predict_fusion(phone_win, watch_win)
         made_fusion = True
-        print(f"[fusion] {now.isoformat()} fusion_pred={fusion_label} (phone_buf={len(phone_buffer)} watch_buf={len(watch_buffer)})")
+        print(
+            f"[fusion] {now.isoformat()} fusion_pred={fusion_label} (phone_buf={len(phone_buffer)} watch_buf={len(watch_buffer)})"
+        )
 
     with buffer_lock:
         if phone_win is not None:
-            phone_predictions.append(phone_label); phone_probs.append(phone_p)
+            phone_predictions.append(phone_label)
+            phone_probs.append(phone_p)
         if watch_win is not None:
-            watch_predictions.append(watch_label); watch_probs.append(watch_p)
+            watch_predictions.append(watch_label)
+            watch_probs.append(watch_p)
         if made_fusion:
-            fusion_predictions.append(fusion_label); fusion_probs.append(fusion_p); prediction_times.append(now)
+            fusion_predictions.append(fusion_label)
+            fusion_probs.append(fusion_p)
+            prediction_times.append(now)
         if len(phone_buffer) >= WINDOW_SIZE and len(watch_buffer) >= WINDOW_SIZE:
             if not both_ready_flag:
                 both_ready_flag = True
                 last_both_ready_time = datetime.now()
-                print(f"[info] BOTH buffers reached WINDOW_SIZE at {last_both_ready_time.isoformat()}")
+                print(
+                    f"[info] BOTH buffers reached WINDOW_SIZE at {last_both_ready_time.isoformat()}"
+                )
         else:
             both_ready_flag = False
+
 
 # -----------------------
 # Plot helpers (unchanged)
@@ -1121,7 +1364,8 @@ def data():
 
 import os
 import platform
-import psutil 
+import psutil
+
 
 @server.route("/debug", methods=["GET"])
 def debug_info():
@@ -1132,9 +1376,15 @@ def debug_info():
     with buffer_lock:
         phone_len = len(phone_buffer)
         watch_len = len(watch_buffer)
-        last_phone_ts = (phone_buffer[-1]["timestamp"].isoformat() if phone_len > 0 else None)
-        last_watch_ts = (watch_buffer[-1]["timestamp"].isoformat() if watch_len > 0 else None)
-        last_pred_time = (prediction_times[-1].isoformat() if len(prediction_times) > 0 else None)
+        last_phone_ts = (
+            phone_buffer[-1]["timestamp"].isoformat() if phone_len > 0 else None
+        )
+        last_watch_ts = (
+            watch_buffer[-1]["timestamp"].isoformat() if watch_len > 0 else None
+        )
+        last_pred_time = (
+            prediction_times[-1].isoformat() if len(prediction_times) > 0 else None
+        )
         recent_dev_list = list(recent_device_strings)[-50:]
         recent_ev = list(recent_events)[-50:]
 
@@ -1145,13 +1395,22 @@ def debug_info():
                 "type": str(type(m)),
                 "id": id(m) if m is not None else None,
                 "repr": repr(m)[:400] if m is not None else None,
-                "path": str(path_var) if path_var is not None else None
+                "path": str(path_var) if path_var is not None else None,
             }
 
         model_status = {
-            "phone": model_info(phone_model, getattr(phone_model_path, 'resolve', lambda: phone_model_path)()),
-            "watch": model_info(watch_model, getattr(watch_model_path, 'resolve', lambda: watch_model_path)()),
-            "fusion": model_info(fusion_model, getattr(fusion_model_path, 'resolve', lambda: fusion_model_path)())
+            "phone": model_info(
+                phone_model,
+                getattr(phone_model_path, "resolve", lambda: phone_model_path)(),
+            ),
+            "watch": model_info(
+                watch_model,
+                getattr(watch_model_path, "resolve", lambda: watch_model_path)(),
+            ),
+            "fusion": model_info(
+                fusion_model,
+                getattr(fusion_model_path, "resolve", lambda: fusion_model_path)(),
+            ),
         }
 
         resp = {
@@ -1168,13 +1427,22 @@ def debug_info():
             "last_prediction_time": last_pred_time,
             "sample_counts": sample_counts.copy(),
             "both_ready_flag": both_ready_flag,
-            "last_both_ready_time": (last_both_ready_time.isoformat() if last_both_ready_time is not None else None),
+            "last_both_ready_time": (
+                last_both_ready_time.isoformat()
+                if last_both_ready_time is not None
+                else None
+            ),
             "recent_device_strings": recent_dev_list,
             "recent_events_count": len(recent_ev),
             "recent_events_sample": recent_ev[-10:],
         }
     # Also print to server console (so you can correlate console logs)
-    print("[DEBUG ENDPOINT CALLED] pid:", resp["pid"], "models:", {k: (v["is_loaded"], v["type"]) for k, v in model_status.items()})
+    print(
+        "[DEBUG ENDPOINT CALLED] pid:",
+        resp["pid"],
+        "models:",
+        {k: (v["is_loaded"], v["type"]) for k, v in model_status.items()},
+    )
     return jsonify(resp)
 
 
@@ -1569,6 +1837,7 @@ def update_dashboard(_counter):
 # Run server
 # -----------------------
 import threading
+
 if __name__ == "__main__":
     print("\n" + "=" * 70)
     print("STARTING IMU ACTIVITY RECOGNITION DASHBOARD (unbounded storage)")
@@ -1578,6 +1847,7 @@ if __name__ == "__main__":
     print("[info] Background pruning thread started\n")
     app.run(port=8000, host="0.0.0.0", debug=False, threaded=True)
 
+
 # make_predictions remains essentially the same as your original
 def make_predictions():
     global both_ready_flag, last_both_ready_time
@@ -1622,29 +1892,42 @@ def make_predictions():
 
     if phone_win is not None:
         phone_label, phone_p = predict_phone(phone_win)
-        print(f"[phone_pred] {datetime.now().isoformat()} -> {phone_label} (phone_buf={len(phone_buffer)})")
+        print(
+            f"[phone_pred] {datetime.now().isoformat()} -> {phone_label} (phone_buf={len(phone_buffer)})"
+        )
     if watch_win is not None:
         watch_label, watch_p = predict_watch(watch_win)
-        print(f"[watch_pred] {datetime.now().isoformat()} -> {watch_label} (watch_buf={len(watch_buffer)})")
+        print(
+            f"[watch_pred] {datetime.now().isoformat()} -> {watch_label} (watch_buf={len(watch_buffer)})"
+        )
     if phone_win is not None and watch_win is not None:
         fusion_label, fusion_p = predict_fusion(phone_win, watch_win)
         made_fusion = True
-        print(f"[fusion] {now.isoformat()} fusion_pred={fusion_label} (phone_buf={len(phone_buffer)} watch_buf={len(watch_buffer)})")
+        print(
+            f"[fusion] {now.isoformat()} fusion_pred={fusion_label} (phone_buf={len(phone_buffer)} watch_buf={len(watch_buffer)})"
+        )
 
     with buffer_lock:
         if phone_win is not None:
-            phone_predictions.append(phone_label); phone_probs.append(phone_p)
+            phone_predictions.append(phone_label)
+            phone_probs.append(phone_p)
         if watch_win is not None:
-            watch_predictions.append(watch_label); watch_probs.append(watch_p)
+            watch_predictions.append(watch_label)
+            watch_probs.append(watch_p)
         if made_fusion:
-            fusion_predictions.append(fusion_label); fusion_probs.append(fusion_p); prediction_times.append(now)
+            fusion_predictions.append(fusion_label)
+            fusion_probs.append(fusion_p)
+            prediction_times.append(now)
         if len(phone_buffer) >= WINDOW_SIZE and len(watch_buffer) >= WINDOW_SIZE:
             if not both_ready_flag:
                 both_ready_flag = True
                 last_both_ready_time = datetime.now()
-                print(f"[info] BOTH buffers reached WINDOW_SIZE at {last_both_ready_time.isoformat()}")
+                print(
+                    f"[info] BOTH buffers reached WINDOW_SIZE at {last_both_ready_time.isoformat()}"
+                )
         else:
             both_ready_flag = False
+
 
 # -----------------------
 # Plot helpers (unchanged)
@@ -2019,7 +2302,8 @@ def data():
 
 import os
 import platform
-import psutil 
+import psutil
+
 
 @server.route("/debug", methods=["GET"])
 def debug_info():
@@ -2030,9 +2314,15 @@ def debug_info():
     with buffer_lock:
         phone_len = len(phone_buffer)
         watch_len = len(watch_buffer)
-        last_phone_ts = (phone_buffer[-1]["timestamp"].isoformat() if phone_len > 0 else None)
-        last_watch_ts = (watch_buffer[-1]["timestamp"].isoformat() if watch_len > 0 else None)
-        last_pred_time = (prediction_times[-1].isoformat() if len(prediction_times) > 0 else None)
+        last_phone_ts = (
+            phone_buffer[-1]["timestamp"].isoformat() if phone_len > 0 else None
+        )
+        last_watch_ts = (
+            watch_buffer[-1]["timestamp"].isoformat() if watch_len > 0 else None
+        )
+        last_pred_time = (
+            prediction_times[-1].isoformat() if len(prediction_times) > 0 else None
+        )
         recent_dev_list = list(recent_device_strings)[-50:]
         recent_ev = list(recent_events)[-50:]
 
@@ -2043,13 +2333,22 @@ def debug_info():
                 "type": str(type(m)),
                 "id": id(m) if m is not None else None,
                 "repr": repr(m)[:400] if m is not None else None,
-                "path": str(path_var) if path_var is not None else None
+                "path": str(path_var) if path_var is not None else None,
             }
 
         model_status = {
-            "phone": model_info(phone_model, getattr(phone_model_path, 'resolve', lambda: phone_model_path)()),
-            "watch": model_info(watch_model, getattr(watch_model_path, 'resolve', lambda: watch_model_path)()),
-            "fusion": model_info(fusion_model, getattr(fusion_model_path, 'resolve', lambda: fusion_model_path)())
+            "phone": model_info(
+                phone_model,
+                getattr(phone_model_path, "resolve", lambda: phone_model_path)(),
+            ),
+            "watch": model_info(
+                watch_model,
+                getattr(watch_model_path, "resolve", lambda: watch_model_path)(),
+            ),
+            "fusion": model_info(
+                fusion_model,
+                getattr(fusion_model_path, "resolve", lambda: fusion_model_path)(),
+            ),
         }
 
         resp = {
@@ -2066,13 +2365,22 @@ def debug_info():
             "last_prediction_time": last_pred_time,
             "sample_counts": sample_counts.copy(),
             "both_ready_flag": both_ready_flag,
-            "last_both_ready_time": (last_both_ready_time.isoformat() if last_both_ready_time is not None else None),
+            "last_both_ready_time": (
+                last_both_ready_time.isoformat()
+                if last_both_ready_time is not None
+                else None
+            ),
             "recent_device_strings": recent_dev_list,
             "recent_events_count": len(recent_ev),
             "recent_events_sample": recent_ev[-10:],
         }
     # Also print to server console (so you can correlate console logs)
-    print("[DEBUG ENDPOINT CALLED] pid:", resp["pid"], "models:", {k: (v["is_loaded"], v["type"]) for k, v in model_status.items()})
+    print(
+        "[DEBUG ENDPOINT CALLED] pid:",
+        resp["pid"],
+        "models:",
+        {k: (v["is_loaded"], v["type"]) for k, v in model_status.items()},
+    )
     return jsonify(resp)
 
 
@@ -2467,6 +2775,7 @@ def update_dashboard(_counter):
 # Run server
 # -----------------------
 import threading
+
 if __name__ == "__main__":
     print("\n" + "=" * 70)
     print("STARTING IMU ACTIVITY RECOGNITION DASHBOARD (unbounded storage)")
