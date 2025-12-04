@@ -125,6 +125,7 @@ print(f"Using device: {device}")
 
 MODEL_DIR = ROOT / "finetune" / "models" / "dashboard_models"
 
+
 def load_model(path: Path) -> typing.Optional[torch.nn.Module]:
     """
     Try to load model robustly:
@@ -175,21 +176,30 @@ def load_model(path: Path) -> typing.Optional[torch.nn.Module]:
             # common keys that indicate state_dict
             for k in ("model_state_dict", "state_dict", "model_state"):
                 if k in loaded:
-                    print(f"[load_model] Found '{k}' in checkpoint from {path} (state dict).")
+                    print(
+                        f"[load_model] Found '{k}' in checkpoint from {path} (state dict)."
+                    )
                     # To load this into a model class we need to instantiate the appropriate class
                     # We cannot reliably infer class here — return dict and print instruction
-                    print("  -> This is a state_dict. To load it, instantiate the model class (SingleStreamClassifier or FusionClassifier) and call load_state_dict(...).")
+                    print(
+                        "  -> This is a state_dict. To load it, instantiate the model class (SingleStreamClassifier or FusionClassifier) and call load_state_dict(...)."
+                    )
                     return None
             # otherwise print keys for debugging
-            print(f"[load_model] torch.load returned a dict with keys: {list(loaded.keys())[:10]}...")
+            print(
+                f"[load_model] torch.load returned a dict with keys: {list(loaded.keys())[:10]}..."
+            )
             return None
 
-        print(f"[load_model] torch.load returned unexpected object of type {type(loaded)}")
+        print(
+            f"[load_model] torch.load returned unexpected object of type {type(loaded)}"
+        )
         return None
     except Exception as e:
         print(f"[load_model] Failed to load {path}: {e}")
         traceback.print_exc()
         return None
+
 
 # Try to find the model files (supports both names - full or plain)
 phone_candidates = [
@@ -211,12 +221,14 @@ fusion_candidates = [
     MODEL_DIR / "fusion.pt",
 ]
 
+
 def try_candidates(cands):
     for p in cands:
         m = load_model(p)
         if m is not None:
             return m, p
     return None, None
+
 
 phone_model, phone_model_path = try_candidates(phone_candidates)
 watch_model, watch_model_path = try_candidates(watch_candidates)
@@ -227,8 +239,10 @@ print("  Phone:", bool(phone_model), phone_model_path)
 print("  Watch:", bool(watch_model), watch_model_path)
 print("  Fusion:", bool(fusion_model), fusion_model_path)
 
+
 def is_model_loaded(m):
     return isinstance(m, torch.nn.Module)
+
 
 # -----------------------
 # Utilities (same as before, with small debug prints)
@@ -241,23 +255,42 @@ def auto_prune_buffers():
     with buffer_lock:
         try:
             while len(phone_time_accel) > 0 and phone_time_accel[0] < cutoff_time:
-                phone_time_accel.popleft(); phone_accel_x.popleft(); phone_accel_y.popleft(); phone_accel_z.popleft()
+                phone_time_accel.popleft()
+                phone_accel_x.popleft()
+                phone_accel_y.popleft()
+                phone_accel_z.popleft()
             while len(phone_time_gyro) > 0 and phone_time_gyro[0] < cutoff_time:
-                phone_time_gyro.popleft(); phone_gyro_x.popleft(); phone_gyro_y.popleft(); phone_gyro_z.popleft()
+                phone_time_gyro.popleft()
+                phone_gyro_x.popleft()
+                phone_gyro_y.popleft()
+                phone_gyro_z.popleft()
             while len(watch_time_accel) > 0 and watch_time_accel[0] < cutoff_time:
-                watch_time_accel.popleft(); watch_accel_x.popleft(); watch_accel_y.popleft(); watch_accel_z.popleft()
+                watch_time_accel.popleft()
+                watch_accel_x.popleft()
+                watch_accel_y.popleft()
+                watch_accel_z.popleft()
             while len(watch_time_rot) > 0 and watch_time_rot[0] < cutoff_time:
-                watch_time_rot.popleft(); watch_rot_x.popleft(); watch_rot_y.popleft(); watch_rot_z.popleft()
+                watch_time_rot.popleft()
+                watch_rot_x.popleft()
+                watch_rot_y.popleft()
+                watch_rot_z.popleft()
             while len(phone_predictions) > 1000:
-                phone_predictions.popleft(); phone_probs.popleft()
+                phone_predictions.popleft()
+                phone_probs.popleft()
             while len(watch_predictions) > 1000:
-                watch_predictions.popleft(); watch_probs.popleft()
+                watch_predictions.popleft()
+                watch_probs.popleft()
             while len(fusion_predictions) > 1000:
-                fusion_predictions.popleft(); fusion_probs.popleft(); prediction_times.popleft()
+                fusion_predictions.popleft()
+                fusion_probs.popleft()
+                prediction_times.popleft()
         except Exception as e:
             print(f"[WARNING] Pruning error: {e}")
 
+
 import threading, time as time_module
+
+
 def pruning_worker():
     while True:
         try:
@@ -267,26 +300,57 @@ def pruning_worker():
         except Exception as e:
             print(f"[ERROR] Pruning worker failed: {e}")
 
+
 def identify_device(device_string: str):
     if not device_string:
         return "phone"
     s = device_string.lower()
-    phone_keywords = ["phone","mobile","pixel","galaxy","iphone","android","oneplus","sm-g","redmi","xiaomi","mi"]
-    watch_keywords = ["watch","wrist","fitbit","applewatch","apple watch","garmin","mi band","wear","galaxywatch","tizen","sm-r","pixel_watch","pixel-watch"]
+    phone_keywords = [
+        "phone",
+        "mobile",
+        "pixel",
+        "galaxy",
+        "iphone",
+        "android",
+        "oneplus",
+        "sm-g",
+        "redmi",
+        "xiaomi",
+        "mi",
+    ]
+    watch_keywords = [
+        "watch",
+        "wrist",
+        "fitbit",
+        "applewatch",
+        "apple watch",
+        "garmin",
+        "mi band",
+        "wear",
+        "galaxywatch",
+        "tizen",
+        "sm-r",
+        "pixel_watch",
+        "pixel-watch",
+    ]
     for kw in watch_keywords:
         if kw in s:
             return "watch"
     for kw in phone_keywords:
         if kw in s:
             return "phone"
-    if "sm-r" in s: return "watch"
-    if "sm-g" in s: return "phone"
+    if "sm-r" in s:
+        return "watch"
+    if "sm-g" in s:
+        return "phone"
     return "phone"
+
 
 def normalize_window(window):
     mean = window.mean(axis=1, keepdims=True)
     std = window.std(axis=1, keepdims=True) + 1e-8
     return (window - mean) / std
+
 
 def create_window_from_buffer(buffer):
     if len(buffer) < WINDOW_SIZE:
@@ -305,72 +369,102 @@ def create_window_from_buffer(buffer):
     )
     return window
 
-# Prediction functions with input-window debug
+
+def _ensure_prob_vector(p):
+    """Return a 1D numpy float vector of length len(ACTIVITY_LABELS)."""
+    try:
+        arr = np.asarray(p, dtype=float).flatten()
+    except Exception:
+        arr = np.zeros(len(ACTIVITY_LABELS), dtype=float)
+    if arr.size != len(ACTIVITY_LABELS):
+        # If it's shorter/longer, fall back to zeros (or pad/truncate if you prefer)
+        arr2 = np.zeros(len(ACTIVITY_LABELS), dtype=float)
+        arr2[: min(arr.size, arr2.size)] = arr[: min(arr.size, arr2.size)]
+        arr = arr2
+    return arr
+
+
 def predict_phone(window):
     if window is None:
-        return "---", np.zeros(len(ACTIVITY_LABELS))
-    # debug: print window stats once in a while
-    try:
-        if np.isnan(window).any() or np.isinf(window).any():
-            print("[predict_phone] window contains NaN/Inf")
-        if np.random.rand() < 0.01:
-            print(f"[predict_phone] window stats mean: {window.mean():.4f}, std: {window.std():.4f}, min:{window.min():.4f}, max:{window.max():.4f}")
-    except Exception:
-        pass
-
+        return "---", np.zeros(len(ACTIVITY_LABELS), dtype=float)
     if not is_model_loaded(phone_model):
         probs = np.random.dirichlet(np.ones(len(ACTIVITY_LABELS)))
-        return ACTIVITY_LABELS[np.argmax(probs)], probs
+        probs = _ensure_prob_vector(probs)
+        return ACTIVITY_LABELS[int(np.argmax(probs))], probs
     try:
         with torch.no_grad():
-            x = torch.from_numpy(normalize_window(window)).unsqueeze(0).float().to(device)
+            x = (
+                torch.from_numpy(normalize_window(window))
+                .unsqueeze(0)
+                .float()
+                .to(device)
+            )
             outputs = phone_model(x)
             probs = torch.softmax(outputs, dim=1).cpu().numpy()[0]
-            return ACTIVITY_LABELS[np.argmax(probs)], probs
+            probs = _ensure_prob_vector(probs)
+            return ACTIVITY_LABELS[int(np.argmax(probs))], probs
     except Exception as e:
-        print("phone prediction error:", e)
+        print("[ERROR] predict_phone:", e)
         traceback.print_exc()
-        return "Error", np.zeros(len(ACTIVITY_LABELS))
+        probs = np.zeros(len(ACTIVITY_LABELS), dtype=float)
+        return "Error", probs
+
 
 def predict_watch(window):
     if window is None:
-        return "---", np.zeros(len(ACTIVITY_LABELS))
-    try:
-        if np.random.rand() < 0.01:
-            print(f"[predict_watch] window stats mean: {window.mean():.4f}, std: {window.std():.4f}")
-    except Exception:
-        pass
+        return "---", np.zeros(len(ACTIVITY_LABELS), dtype=float)
     if not is_model_loaded(watch_model):
         probs = np.random.dirichlet(np.ones(len(ACTIVITY_LABELS)))
-        return ACTIVITY_LABELS[np.argmax(probs)], probs
+        probs = _ensure_prob_vector(probs)
+        return ACTIVITY_LABELS[int(np.argmax(probs))], probs
     try:
         with torch.no_grad():
-            x = torch.from_numpy(normalize_window(window)).unsqueeze(0).float().to(device)
+            x = (
+                torch.from_numpy(normalize_window(window))
+                .unsqueeze(0)
+                .float()
+                .to(device)
+            )
             outputs = watch_model(x)
             probs = torch.softmax(outputs, dim=1).cpu().numpy()[0]
-            return ACTIVITY_LABELS[np.argmax(probs)], probs
+            probs = _ensure_prob_vector(probs)
+            return ACTIVITY_LABELS[int(np.argmax(probs))], probs
     except Exception as e:
-        print("watch prediction error:", e)
+        print("[ERROR] predict_watch:", e)
         traceback.print_exc()
-        return "Error", np.zeros(len(ACTIVITY_LABELS))
+        return "Error", np.zeros(len(ACTIVITY_LABELS), dtype=float)
+
 
 def predict_fusion(phone_window, watch_window):
     if phone_window is None or watch_window is None:
-        return "---", np.zeros(len(ACTIVITY_LABELS))
+        return "---", np.zeros(len(ACTIVITY_LABELS), dtype=float)
     if not is_model_loaded(fusion_model):
         probs = np.random.dirichlet(np.ones(len(ACTIVITY_LABELS)))
-        return ACTIVITY_LABELS[np.argmax(probs)], probs
+        probs = _ensure_prob_vector(probs)
+        return ACTIVITY_LABELS[int(np.argmax(probs))], probs
     try:
         with torch.no_grad():
-            xp = torch.from_numpy(normalize_window(phone_window)).unsqueeze(0).float().to(device)
-            xw = torch.from_numpy(normalize_window(watch_window)).unsqueeze(0).float().to(device)
+            xp = (
+                torch.from_numpy(normalize_window(phone_window))
+                .unsqueeze(0)
+                .float()
+                .to(device)
+            )
+            xw = (
+                torch.from_numpy(normalize_window(watch_window))
+                .unsqueeze(0)
+                .float()
+                .to(device)
+            )
             outputs = fusion_model(xp, xw)
             probs = torch.softmax(outputs, dim=1).cpu().numpy()[0]
-            return ACTIVITY_LABELS[np.argmax(probs)], probs
+            probs = _ensure_prob_vector(probs)
+            return ACTIVITY_LABELS[int(np.argmax(probs))], probs
     except Exception as e:
-        print("fusion prediction error:", e)
+        print("[ERROR] predict_fusion:", e)
         traceback.print_exc()
-        return "Error", np.zeros(len(ACTIVITY_LABELS))
+        return "Error", np.zeros(len(ACTIVITY_LABELS), dtype=float)
+
 
 # make_predictions remains essentially the same as your original
 def make_predictions():
@@ -416,29 +510,42 @@ def make_predictions():
 
     if phone_win is not None:
         phone_label, phone_p = predict_phone(phone_win)
-        print(f"[phone_pred] {datetime.now().isoformat()} -> {phone_label} (phone_buf={len(phone_buffer)})")
+        print(
+            f"[phone_pred] {datetime.now().isoformat()} -> {phone_label} (phone_buf={len(phone_buffer)})"
+        )
     if watch_win is not None:
         watch_label, watch_p = predict_watch(watch_win)
-        print(f"[watch_pred] {datetime.now().isoformat()} -> {watch_label} (watch_buf={len(watch_buffer)})")
+        print(
+            f"[watch_pred] {datetime.now().isoformat()} -> {watch_label} (watch_buf={len(watch_buffer)})"
+        )
     if phone_win is not None and watch_win is not None:
         fusion_label, fusion_p = predict_fusion(phone_win, watch_win)
         made_fusion = True
-        print(f"[fusion] {now.isoformat()} fusion_pred={fusion_label} (phone_buf={len(phone_buffer)} watch_buf={len(watch_buffer)})")
+        print(
+            f"[fusion] {now.isoformat()} fusion_pred={fusion_label} (phone_buf={len(phone_buffer)} watch_buf={len(watch_buffer)})"
+        )
 
     with buffer_lock:
         if phone_win is not None:
-            phone_predictions.append(phone_label); phone_probs.append(phone_p)
+            phone_predictions.append(phone_label)
+            phone_probs.append(phone_p)
         if watch_win is not None:
-            watch_predictions.append(watch_label); watch_probs.append(watch_p)
+            watch_predictions.append(watch_label)
+            watch_probs.append(watch_p)
         if made_fusion:
-            fusion_predictions.append(fusion_label); fusion_probs.append(fusion_p); prediction_times.append(now)
+            fusion_predictions.append(fusion_label)
+            fusion_probs.append(fusion_p)
+            prediction_times.append(now)
         if len(phone_buffer) >= WINDOW_SIZE and len(watch_buffer) >= WINDOW_SIZE:
             if not both_ready_flag:
                 both_ready_flag = True
                 last_both_ready_time = datetime.now()
-                print(f"[info] BOTH buffers reached WINDOW_SIZE at {last_both_ready_time.isoformat()}")
+                print(
+                    f"[info] BOTH buffers reached WINDOW_SIZE at {last_both_ready_time.isoformat()}"
+                )
         else:
             both_ready_flag = False
+
 
 # -----------------------
 # Plot helpers (unchanged)
@@ -490,31 +597,46 @@ def create_sensor_graph(time_data, sensor_data, names, title, yaxis_label, color
 
 
 def create_prob_bars(probs, title):
-    probs = np.asarray(probs)
+    try:
+        probs = np.asarray(probs, dtype=float).flatten()
+    except Exception:
+        probs = np.zeros(len(ACTIVITY_LABELS), dtype=float)
     if probs.size != len(ACTIVITY_LABELS):
-        probs = np.zeros(len(ACTIVITY_LABELS))
-    fig = go.Figure(
-        data=[
-            go.Bar(
-                x=ACTIVITY_LABELS,
-                y=probs,
-                marker=dict(color=ACTIVITY_COLORS),
-                text=[f"{p:.1%}" for p in probs],
-                textposition="outside",
-            )
-        ]
-    )
-    fig.update_layout(
-        title=dict(text=title, font=dict(size=12)),
-        yaxis=dict(
-            title="Probability", range=[0, 1], showgrid=True, gridcolor="#ecf0f1"
-        ),
-        xaxis=dict(title="Activity"),
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-        margin=dict(l=40, r=20, t=40, b=40),
-    )
-    return fig
+        tmp = np.zeros(len(ACTIVITY_LABELS), dtype=float)
+        tmp[: min(probs.size, tmp.size)] = probs[: min(probs.size, tmp.size)]
+        probs = tmp
+    # Safety clamp to [0,1]
+    probs = np.clip(probs, 0.0, 1.0)
+    # If they don't sum to 1, that's fine for visualization; show raw probs.
+    try:
+        fig = go.Figure(
+            data=[
+                go.Bar(
+                    x=ACTIVITY_LABELS,
+                    y=probs.tolist(),
+                    marker=dict(color=ACTIVITY_COLORS),
+                    text=[f"{float(p):.1%}" for p in probs],
+                    textposition="outside",
+                )
+            ]
+        )
+        fig.update_layout(
+            title=dict(text=title, font=dict(size=12)),
+            yaxis=dict(
+                title="Probability", range=[0, 1], showgrid=True, gridcolor="#ecf0f1"
+            ),
+            xaxis=dict(title="Activity"),
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+            margin=dict(l=40, r=20, t=40, b=40),
+        )
+        return fig
+    except Exception as e:
+        print("[ERROR] create_prob_bars:", e)
+        traceback.print_exc()
+        # Return an empty safe figure
+        empty = go.Figure()
+        return empty
 
 
 def create_prediction_timeline():
@@ -813,7 +935,8 @@ def data():
 
 import os
 import platform
-import psutil 
+import psutil
+
 
 @server.route("/debug", methods=["GET"])
 def debug_info():
@@ -824,9 +947,15 @@ def debug_info():
     with buffer_lock:
         phone_len = len(phone_buffer)
         watch_len = len(watch_buffer)
-        last_phone_ts = (phone_buffer[-1]["timestamp"].isoformat() if phone_len > 0 else None)
-        last_watch_ts = (watch_buffer[-1]["timestamp"].isoformat() if watch_len > 0 else None)
-        last_pred_time = (prediction_times[-1].isoformat() if len(prediction_times) > 0 else None)
+        last_phone_ts = (
+            phone_buffer[-1]["timestamp"].isoformat() if phone_len > 0 else None
+        )
+        last_watch_ts = (
+            watch_buffer[-1]["timestamp"].isoformat() if watch_len > 0 else None
+        )
+        last_pred_time = (
+            prediction_times[-1].isoformat() if len(prediction_times) > 0 else None
+        )
         recent_dev_list = list(recent_device_strings)[-50:]
         recent_ev = list(recent_events)[-50:]
 
@@ -837,13 +966,22 @@ def debug_info():
                 "type": str(type(m)),
                 "id": id(m) if m is not None else None,
                 "repr": repr(m)[:400] if m is not None else None,
-                "path": str(path_var) if path_var is not None else None
+                "path": str(path_var) if path_var is not None else None,
             }
 
         model_status = {
-            "phone": model_info(phone_model, getattr(phone_model_path, 'resolve', lambda: phone_model_path)()),
-            "watch": model_info(watch_model, getattr(watch_model_path, 'resolve', lambda: watch_model_path)()),
-            "fusion": model_info(fusion_model, getattr(fusion_model_path, 'resolve', lambda: fusion_model_path)())
+            "phone": model_info(
+                phone_model,
+                getattr(phone_model_path, "resolve", lambda: phone_model_path)(),
+            ),
+            "watch": model_info(
+                watch_model,
+                getattr(watch_model_path, "resolve", lambda: watch_model_path)(),
+            ),
+            "fusion": model_info(
+                fusion_model,
+                getattr(fusion_model_path, "resolve", lambda: fusion_model_path)(),
+            ),
         }
 
         resp = {
@@ -860,13 +998,22 @@ def debug_info():
             "last_prediction_time": last_pred_time,
             "sample_counts": sample_counts.copy(),
             "both_ready_flag": both_ready_flag,
-            "last_both_ready_time": (last_both_ready_time.isoformat() if last_both_ready_time is not None else None),
+            "last_both_ready_time": (
+                last_both_ready_time.isoformat()
+                if last_both_ready_time is not None
+                else None
+            ),
             "recent_device_strings": recent_dev_list,
             "recent_events_count": len(recent_ev),
             "recent_events_sample": recent_ev[-10:],
         }
     # Also print to server console (so you can correlate console logs)
-    print("[DEBUG ENDPOINT CALLED] pid:", resp["pid"], "models:", {k: (v["is_loaded"], v["type"]) for k, v in model_status.items()})
+    print(
+        "[DEBUG ENDPOINT CALLED] pid:",
+        resp["pid"],
+        "models:",
+        {k: (v["is_loaded"], v["type"]) for k, v in model_status.items()},
+    )
     return jsonify(resp)
 
 
@@ -1102,18 +1249,22 @@ def update_dashboard(_counter):
             phone_accel_x_list = list(phone_accel_x)
             phone_accel_y_list = list(phone_accel_y)
             phone_accel_z_list = list(phone_accel_z)
+
             phone_time_gyro_list = list(phone_time_gyro)
             phone_gyro_x_list = list(phone_gyro_x)
             phone_gyro_y_list = list(phone_gyro_y)
             phone_gyro_z_list = list(phone_gyro_z)
+
             watch_time_accel_list = list(watch_time_accel)
             watch_accel_x_list = list(watch_accel_x)
             watch_accel_y_list = list(watch_accel_y)
             watch_accel_z_list = list(watch_accel_z)
+
             watch_time_rot_list = list(watch_time_rot)
             watch_rot_x_list = list(watch_rot_x)
             watch_rot_y_list = list(watch_rot_y)
             watch_rot_z_list = list(watch_rot_z)
+
             phone_samples = len(phone_buffer)
             watch_samples = len(watch_buffer)
             last_phone_pred = (
@@ -1125,40 +1276,46 @@ def update_dashboard(_counter):
             last_fusion_pred = (
                 fusion_predictions[-1] if len(fusion_predictions) > 0 else "---"
             )
+
+            # Coerce last probs to safe arrays
             last_phone_probs = (
-                phone_probs[-1]
+                _ensure_prob_vector(phone_probs[-1])
                 if len(phone_probs) > 0
                 else np.zeros(len(ACTIVITY_LABELS))
-            ).copy()
+            )
             last_watch_probs = (
-                watch_probs[-1]
+                _ensure_prob_vector(watch_probs[-1])
                 if len(watch_probs) > 0
                 else np.zeros(len(ACTIVITY_LABELS))
-            ).copy()
+            )
             last_fusion_probs = (
-                fusion_probs[-1]
+                _ensure_prob_vector(fusion_probs[-1])
                 if len(fusion_probs) > 0
                 else np.zeros(len(ACTIVITY_LABELS))
-            ).copy()
+            )
             frame_count_copy = frame_count
 
-        plot_limit = 2000
-        ta_phone = phone_time_accel_list[-plot_limit:]
-        ax_phone = phone_accel_x_list[-plot_limit:]
-        ay_phone = phone_accel_y_list[-plot_limit:]
-        az_phone = phone_accel_z_list[-plot_limit:]
-        tg_phone = phone_time_gyro_list[-plot_limit:]
-        gx_phone = phone_gyro_x_list[-plot_limit:]
-        gy_phone = phone_gyro_y_list[-plot_limit:]
-        gz_phone = phone_gyro_z_list[-plot_limit:]
-        ta_watch = watch_time_accel_list[-plot_limit:]
-        ax_watch = watch_accel_x_list[-plot_limit:]
-        ay_watch = watch_accel_y_list[-plot_limit:]
-        az_watch = watch_accel_z_list[-plot_limit:]
-        tr_watch = watch_time_rot_list[-plot_limit:]
-        rx_watch = watch_rot_x_list[-plot_limit:]
-        ry_watch = watch_rot_y_list[-plot_limit:]
-        rz_watch = watch_rot_z_list[-plot_limit:]
+        # Build figures (outside lock)
+        ta_phone = phone_time_accel_list[-PLOT_MAX_POINTS:]
+        ax_phone = phone_accel_x_list[-PLOT_MAX_POINTS:]
+        ay_phone = phone_accel_y_list[-PLOT_MAX_POINTS:]
+        az_phone = phone_accel_z_list[-PLOT_MAX_POINTS:]
+
+        tg_phone = phone_time_gyro_list[-PLOT_MAX_POINTS:]
+        gx_phone = phone_gyro_x_list[-PLOT_MAX_POINTS:]
+        gy_phone = phone_gyro_y_list[-PLOT_MAX_POINTS:]
+        gz_phone = phone_gyro_z_list[-PLOT_MAX_POINTS:]
+
+        ta_watch = watch_time_accel_list[-PLOT_MAX_POINTS:]
+        ax_watch = watch_accel_x_list[-PLOT_MAX_POINTS:]
+        ay_watch = watch_accel_y_list[-PLOT_MAX_POINTS:]
+        az_watch = watch_accel_z_list[-PLOT_MAX_POINTS:]
+
+        tr_watch = watch_time_rot_list[-PLOT_MAX_POINTS:]
+        rx_watch = watch_rot_x_list[-PLOT_MAX_POINTS:]
+        ry_watch = watch_rot_y_list[-PLOT_MAX_POINTS:]
+        rz_watch = watch_rot_z_list[-PLOT_MAX_POINTS:]
+
         status = html.Div(
             [
                 html.Span("📱 Phone: ", style={"fontWeight": "bold"}),
@@ -1170,7 +1327,7 @@ def update_dashboard(_counter):
                         )
                     },
                 ),
-                html.Span(" | ", style={"margin": "0 12px"}),
+                html.Span(" | "),
                 html.Span("⌚ Watch: ", style={"fontWeight": "bold"}),
                 html.Span(
                     f"{watch_samples}/{WINDOW_SIZE} samples",
@@ -1181,12 +1338,13 @@ def update_dashboard(_counter):
                     },
                 ),
                 html.Span(" | "),
-                html.Span(f"Server: {local_ip}:8000", style={"fontWeight": "bold"}),
+                html.Span(f"Server: {local_ip}:8000"),
                 html.Span(" | "),
                 html.Span(f"Frames: {frame_count_copy}", style={"color": "#7f8c8d"}),
             ],
             style={"fontSize": "16px", "padding": "8px"},
         )
+
         phone_accel_fig = create_sensor_graph(
             ta_phone,
             [ax_phone, ay_phone, az_phone],
@@ -1219,10 +1377,12 @@ def update_dashboard(_counter):
             "Rotation Rate (rad/s)",
             ["#8e44ad", "#d35400", "#16a085"],
         )
+
         phone_prob_fig = create_prob_bars(last_phone_probs, "Phone Model Confidence")
         watch_prob_fig = create_prob_bars(last_watch_probs, "Watch Model Confidence")
         fusion_prob_fig = create_prob_bars(last_fusion_probs, "Fusion Model Confidence")
         timeline_fig = create_prediction_timeline()
+
         return (
             status,
             phone_accel_fig,
@@ -1237,12 +1397,18 @@ def update_dashboard(_counter):
             fusion_prob_fig,
             timeline_fig,
         )
+
     except Exception as e:
-        print("[ERROR] Dashboard callback:", e)
+        # Print full stacktrace to server logs so you can inspect root cause
+        print("[ERROR] Dashboard callback exception:", e)
         traceback.print_exc()
+        # graceful fallbacks (non-blocking)
         empty_fig = go.Figure()
+        fallback_status = html.Div(
+            "Dashboard temporarily unavailable (see server logs)."
+        )
         return (
-            html.Div("Error"),
+            fallback_status,
             empty_fig,
             empty_fig,
             empty_fig,
@@ -1261,6 +1427,7 @@ def update_dashboard(_counter):
 # Run server
 # -----------------------
 import threading
+
 if __name__ == "__main__":
     print("\n" + "=" * 70)
     print("STARTING IMU ACTIVITY RECOGNITION DASHBOARD (unbounded storage)")
