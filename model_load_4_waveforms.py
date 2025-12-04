@@ -498,6 +498,16 @@ TARGET_HZ = 50
 ACTIVITY_LABELS = ["Walk", "Run", "Sit", "Stand", "Lie"]
 ACTIVITY_COLORS = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
 
+# UI mapping: group sit/stand/lie -> "Still motion"
+def map_label_ui(label: str) -> str:
+    try:
+        if label in ("Sit", "Stand", "Lie"):
+            return "Still motion"
+    except Exception:
+        pass
+    return label
+
+
 # -----------------------
 # Shared buffers & locks
 # -----------------------
@@ -779,10 +789,7 @@ def identify_device(device_string: str):
     return "phone"
 
 
-def normalize_window(window):
-    mean = window.mean(axis=1, keepdims=True)
-    std = window.std(axis=1, keepdims=True) + 1e-8
-    return (window - mean) / std
+
 
 
 def create_window_from_buffer(buffer):
@@ -1758,15 +1765,16 @@ def update_dashboard(_counter):
             watch_rot_z_list = list(watch_rot_z)
             phone_samples = len(phone_buffer)
             watch_samples = len(watch_buffer)
-            last_phone_pred = (
-                phone_predictions[-1] if len(phone_predictions) > 0 else "---"
-            )
-            last_watch_pred = (
-                watch_predictions[-1] if len(watch_predictions) > 0 else "---"
-            )
-            last_fusion_pred = (
-                fusion_predictions[-1] if len(fusion_predictions) > 0 else "---"
-            )
+            last_phone_pred_raw = phone_predictions[-1] if len(phone_predictions) > 0 else "---"
+            last_watch_pred_raw = watch_predictions[-1] if len(watch_predictions) > 0 else "---"
+            last_fusion_pred_raw = fusion_predictions[-1] if len(fusion_predictions) > 0 else "---"
+
+            # Map for UI (sit/stand/lie -> "Still motion")
+            last_phone_pred = map_label_ui(last_phone_pred_raw)
+            last_watch_pred = map_label_ui(last_watch_pred_raw)
+            last_fusion_pred = map_label_ui(last_fusion_pred_raw)
+
+
             last_phone_probs = (
                 phone_probs[-1]
                 if len(phone_probs) > 0
@@ -2080,13 +2088,23 @@ def create_prediction_timeline():
         fusion_preds_copy = list(fusion_predictions)[-500:]
     if len(pred_times_copy) == 0:
         return go.Figure()
-    activity_to_num = {label: i for i, label in enumerate(ACTIVITY_LABELS)}
-    phone_nums = [activity_to_num.get(p, -1) for p in phone_preds_copy]
-    watch_nums = [activity_to_num.get(p, -1) for p in watch_preds_copy]
-    fusion_nums = [activity_to_num.get(p, -1) for p in fusion_preds_copy]
-    x_serial = [
-        (t.isoformat() if hasattr(t, "isoformat") else t) for t in pred_times_copy
-    ]
+
+    # Map raw labels to UI labels (so Sit/Stand/Lie -> Still motion)
+    phone_ui = [map_label_ui(p) for p in phone_preds_copy]
+    watch_ui = [map_label_ui(p) for p in watch_preds_copy]
+    fusion_ui = [map_label_ui(p) for p in fusion_preds_copy]
+
+    # Build canonical ordered list of UI activities present (or fall back to common set)
+    canonical = ["Walk", "Run", "Still motion"]
+    # ensure mapping from label->index
+    activity_to_num = {label: i for i, label in enumerate(canonical)}
+
+    # convert sequences to numeric (unknown -> -1)
+    phone_nums = [activity_to_num.get(p, -1) for p in phone_ui]
+    watch_nums = [activity_to_num.get(p, -1) for p in watch_ui]
+    fusion_nums = [activity_to_num.get(p, -1) for p in fusion_ui]
+
+    x_serial = [(t.isoformat() if hasattr(t, "isoformat") else t) for t in pred_times_copy]
     fig = go.Figure()
     fig.add_trace(
         go.Scatter(
@@ -2121,8 +2139,8 @@ def create_prediction_timeline():
         yaxis=dict(
             title="Activity",
             tickmode="array",
-            tickvals=list(range(len(ACTIVITY_LABELS))),
-            ticktext=ACTIVITY_LABELS,
+            tickvals=list(range(len(canonical))),
+            ticktext=canonical,
         ),
         plot_bgcolor="white",
         paper_bgcolor="white",
@@ -2130,6 +2148,7 @@ def create_prediction_timeline():
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
     return fig
+
 
 
 # -----------------------
