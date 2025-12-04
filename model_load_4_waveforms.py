@@ -393,6 +393,43 @@ def normalize_window(window, role=None):
     role: 'phone' or 'watch' or None
     """
     try:
+        # Orientation Normalization
+        if role == "phone":
+            # window shape expected: (6, W)
+            # acc[0-2], gyro[3-5]
+            # We need gravity: estimate it as mean(acc) over window (works well for still activities)
+            
+            acc = window[0:3, :].T     # (W, 3)
+            gyro = window[3:6, :].T    # (W, 3)
+            
+            # Estimate gravity (low-frequency component)
+            g_vec = acc.mean(axis=0)
+            g_norm = np.linalg.norm(g_vec) + 1e-8
+            g = g_vec / g_norm       # unit vector
+            
+            # Build stable orientation axes
+            # Use a reference x-axis to derive orthogonal basis
+            ref = np.array([1.0, 0.0, 0.0])
+            x_axis = np.cross(ref, g)
+            x_norm = np.linalg.norm(x_axis)
+            if x_norm < 1e-6:   # ref parallel to g -> choose different ref
+                ref = np.array([0.0, 1.0, 0.0])
+                x_axis = np.cross(ref, g)
+                x_norm = np.linalg.norm(x_axis)
+            x_axis /= (x_norm + 1e-8)
+            y_axis = np.cross(g, x_axis)
+
+            # Rotation matrix: world = [x; y; g]
+            R = np.stack([x_axis, y_axis, g], axis=1)   # (3,3)
+            Rt = R.T
+
+            # Rotate all samples
+            acc_rot = acc @ Rt
+            gyro_rot = gyro @ Rt
+
+            # Put back into window
+            window = np.vstack([acc_rot.T, gyro_rot.T])  # shape (6, W)
+
         # use device stats if available
         if role in device_stats and device_stats[role]["n"] >= MIN_STATS_SAMPLES:
             s = device_stats[role]
@@ -430,74 +467,6 @@ def create_window_from_buffer(buffer):
     return window
 
 
-# Prediction functions with input-window debug
-#!/usr/bin/env python3
-# realtime_dashboard_unbounded_full.py
-# Robust version: auto-adds local src paths, robust model loader, absolute model paths, input-window debug
-from threading import RLock
-import dash
-from dash.dependencies import Output, Input
-from dash import dcc, html
-from datetime import datetime, timedelta
-import json
-import plotly.graph_objs as go
-from collections import deque
-from flask import Flask, request, jsonify
-import socket
-import numpy as np
-import torch
-from pathlib import Path
-import traceback
-import sys
-import os
-import typing
-
-# -----------------------
-# AUTO-SET LOCAL PROJECT PATHS (VERY IMPORTANT)
-# This ensures `finetune.models` and `pretrain` are importable without requiring external PYTHONPATH.
-# Put this before any attempt to import finetune.* modules.
-ROOT = Path(__file__).resolve().parent  # repo folder where this file lives
-finetune_src = ROOT / "finetune" / "src"
-pretrain_src = ROOT / "pretrain" / "src"
-for p in (finetune_src, pretrain_src):
-    pstr = str(p)
-    if p.exists() and pstr not in sys.path:
-        sys.path.insert(0, pstr)
-
-# Now it's safe to import finetune.models if present
-try:
-    import finetune.models as finetune_models  # type: ignore
-except Exception:
-    finetune_models = None
-
-# -----------------------
-# Basic config
-# -----------------------
-hostname = socket.gethostname()
-try:
-    local_ip = socket.gethostbyname(hostname)
-except Exception:
-    local_ip = "127.0.0.1"
-print(f"Server running at: http://{local_ip}:8000")
-print(f"Configure Sensor Logger to POST to: http://{local_ip}:8000/data")
-
-server = Flask(__name__)
-app = dash.Dash(__name__, server=server)
-
-# -----------------------
-# Configuration (tweak as desired)
-# -----------------------
-MAX_DATA_POINTS = None
-PLOT_MAX_POINTS = 5000
-PREDICTION_PLOT_MAX = 500
-UPDATE_FREQ_MS = 200
-WINDOW_SIZE = 150
-STEP_SIZE_RT = 75
-TARGET_HZ = 50
-
-ACTIVITY_LABELS = ["Walk", "Run", "Sit", "Stand", "Lie"]
-ACTIVITY_COLORS = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
-
 # UI mapping: group sit/stand/lie -> "Still motion"
 def map_label_ui(label: str) -> str:
     try:
@@ -506,308 +475,6 @@ def map_label_ui(label: str) -> str:
     except Exception:
         pass
     return label
-
-
-# -----------------------
-# Shared buffers & locks
-# -----------------------
-buffer_lock = RLock()
-
-
-def make_deque(maxlen):
-    return deque(maxlen=maxlen) if (maxlen is not None) else deque()
-
-
-# --- time series / buffers (same as your original) ---
-phone_time_accel = make_deque(MAX_DATA_POINTS)
-phone_accel_x = make_deque(MAX_DATA_POINTS)
-phone_accel_y = make_deque(MAX_DATA_POINTS)
-phone_accel_z = make_deque(MAX_DATA_POINTS)
-phone_time_gyro = make_deque(MAX_DATA_POINTS)
-phone_gyro_x = make_deque(MAX_DATA_POINTS)
-phone_gyro_y = make_deque(MAX_DATA_POINTS)
-phone_gyro_z = make_deque(MAX_DATA_POINTS)
-
-watch_time_accel = make_deque(MAX_DATA_POINTS)
-watch_accel_x = make_deque(MAX_DATA_POINTS)
-watch_accel_y = make_deque(MAX_DATA_POINTS)
-watch_accel_z = make_deque(MAX_DATA_POINTS)
-watch_time_rot = make_deque(MAX_DATA_POINTS)
-watch_rot_x = make_deque(MAX_DATA_POINTS)
-watch_rot_y = make_deque(MAX_DATA_POINTS)
-watch_rot_z = make_deque(MAX_DATA_POINTS)
-
-phone_buffer = make_deque(MAX_DATA_POINTS)
-watch_buffer = make_deque(MAX_DATA_POINTS)
-accel_cache = {"phone": make_deque(2000), "watch": make_deque(2000)}
-gyro_cache = {"phone": make_deque(2000), "watch": make_deque(2000)}
-
-sample_counts = {"phone": 0, "watch": 0}
-
-phone_predictions = make_deque(MAX_DATA_POINTS)
-watch_predictions = make_deque(MAX_DATA_POINTS)
-fusion_predictions = make_deque(MAX_DATA_POINTS)
-prediction_times = make_deque(MAX_DATA_POINTS)
-
-phone_probs = make_deque(MAX_DATA_POINTS)
-watch_probs = make_deque(MAX_DATA_POINTS)
-fusion_probs = make_deque(MAX_DATA_POINTS)
-
-recent_events = deque(maxlen=200)
-recent_device_strings = deque(maxlen=200)
-
-frame_count = 0
-both_ready_flag = False
-last_both_ready_time = None
-
-# -----------------------
-# Models (user-provided or placeholders)
-# -----------------------
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
-
-MODEL_DIR = ROOT / "finetune" / "models" / "dashboard_models"
-
-
-def load_model(path: Path) -> typing.Optional[torch.nn.Module]:
-    """
-    Try to load model robustly:
-      - If file is a scripted model (.pt / TorchScript), use torch.jit.load
-      - Try torch.load with weights_only=False (this will require finetune.models to be importable)
-      - If loaded object is nn.Module, return it on device
-      - Otherwise print diagnostics and return None
-    """
-    try:
-        if not path.exists():
-            print(f"[load_model] model file not found: {path}")
-            return None
-        print(f"[load_model] Loading: {path}")
-        suffix = path.suffix.lower()
-        # TorchScript fallback
-        if suffix in (".pt", ".torchscript"):
-            try:
-                m = torch.jit.load(str(path), map_location=device)
-                m.eval()
-                print(f"[load_model] torch.jit.load succeeded for {path}")
-                return m
-            except Exception as e:
-                print(f"[load_model] torch.jit.load failed: {e}")
-        # Prefer loading with weights_only=False so pickled module objects can be recovered
-        try:
-            loaded = torch.load(str(path), map_location=device, weights_only=False)
-        except TypeError:
-            # some PyTorch versions may not accept weights_only kwarg; fallback
-            loaded = torch.load(str(path), map_location=device)
-        except Exception as e:
-            print(f"[load_model] torch.load initial attempt failed: {e}")
-            # If it fails with weights-only safe-loader, try without weights_only (only do if you trust the file)
-            try:
-                loaded = torch.load(str(path), map_location=device, weights_only=False)
-            except Exception as e2:
-                print(f"[load_model] torch.load second attempt failed: {e2}")
-                return None
-
-        # If it's an nn.Module
-        if isinstance(loaded, torch.nn.Module):
-            loaded.to(device)
-            loaded.eval()
-            print(f"[load_model] Loaded nn.Module from {path}")
-            return loaded
-
-        # If it's a dict, check common checkpoint keys
-        if isinstance(loaded, dict):
-            # common keys that indicate state_dict
-            for k in ("model_state_dict", "state_dict", "model_state"):
-                if k in loaded:
-                    print(
-                        f"[load_model] Found '{k}' in checkpoint from {path} (state dict)."
-                    )
-                    # To load this into a model class we need to instantiate the appropriate class
-                    # We cannot reliably infer class here — return dict and print instruction
-                    print(
-                        "  -> This is a state_dict. To load it, instantiate the model class (SingleStreamClassifier or FusionClassifier) and call load_state_dict(...)."
-                    )
-                    return None
-            # otherwise print keys for debugging
-            print(
-                f"[load_model] torch.load returned a dict with keys: {list(loaded.keys())[:10]}..."
-            )
-            return None
-
-        print(
-            f"[load_model] torch.load returned unexpected object of type {type(loaded)}"
-        )
-        return None
-    except Exception as e:
-        print(f"[load_model] Failed to load {path}: {e}")
-        traceback.print_exc()
-        return None
-
-
-# Try to find the model files (supports both names - full or plain)
-phone_candidates = [
-    MODEL_DIR / "phone_classifier_full.pth",
-    MODEL_DIR / "phone_classifier.pth",
-    MODEL_DIR / "phone_classifier.pt",
-    MODEL_DIR / "phone.pt",
-]
-watch_candidates = [
-    MODEL_DIR / "watch_classifier_full.pth",
-    MODEL_DIR / "watch_classifier.pth",
-    MODEL_DIR / "watch_classifier.pt",
-    MODEL_DIR / "watch.pt",
-]
-fusion_candidates = [
-    MODEL_DIR / "fusion_classifier_full.pth",
-    MODEL_DIR / "fusion_classifier.pth",
-    MODEL_DIR / "fusion_classifier.pt",
-    MODEL_DIR / "fusion.pt",
-]
-
-
-def try_candidates(cands):
-    for p in cands:
-        m = load_model(p)
-        if m is not None:
-            return m, p
-    return None, None
-
-
-phone_model, phone_model_path = try_candidates(phone_candidates)
-watch_model, watch_model_path = try_candidates(watch_candidates)
-fusion_model, fusion_model_path = try_candidates(fusion_candidates)
-
-print("Model load results:")
-print("  Phone:", bool(phone_model), phone_model_path)
-print("  Watch:", bool(watch_model), watch_model_path)
-print("  Fusion:", bool(fusion_model), fusion_model_path)
-
-
-def is_model_loaded(m):
-    return isinstance(m, torch.nn.Module)
-
-
-# -----------------------
-# Utilities (same as before, with small debug prints)
-# -----------------------
-def auto_prune_buffers():
-    max_age_seconds = 600
-    cutoff_time = datetime.now() - timedelta(seconds=max_age_seconds)
-    if MAX_DATA_POINTS is not None:
-        return
-    with buffer_lock:
-        try:
-            while len(phone_time_accel) > 0 and phone_time_accel[0] < cutoff_time:
-                phone_time_accel.popleft()
-                phone_accel_x.popleft()
-                phone_accel_y.popleft()
-                phone_accel_z.popleft()
-            while len(phone_time_gyro) > 0 and phone_time_gyro[0] < cutoff_time:
-                phone_time_gyro.popleft()
-                phone_gyro_x.popleft()
-                phone_gyro_y.popleft()
-                phone_gyro_z.popleft()
-            while len(watch_time_accel) > 0 and watch_time_accel[0] < cutoff_time:
-                watch_time_accel.popleft()
-                watch_accel_x.popleft()
-                watch_accel_y.popleft()
-                watch_accel_z.popleft()
-            while len(watch_time_rot) > 0 and watch_time_rot[0] < cutoff_time:
-                watch_time_rot.popleft()
-                watch_rot_x.popleft()
-                watch_rot_y.popleft()
-                watch_rot_z.popleft()
-            while len(phone_predictions) > 1000:
-                phone_predictions.popleft()
-                phone_probs.popleft()
-            while len(watch_predictions) > 1000:
-                watch_predictions.popleft()
-                watch_probs.popleft()
-            while len(fusion_predictions) > 1000:
-                fusion_predictions.popleft()
-                fusion_probs.popleft()
-                prediction_times.popleft()
-        except Exception as e:
-            print(f"[WARNING] Pruning error: {e}")
-
-
-import threading, time as time_module
-
-
-def pruning_worker():
-    while True:
-        try:
-            time_module.sleep(60)
-            auto_prune_buffers()
-            print(f"[pruning] Buffers pruned at {datetime.now().isoformat()}")
-        except Exception as e:
-            print(f"[ERROR] Pruning worker failed: {e}")
-
-
-def identify_device(device_string: str):
-    if not device_string:
-        return "phone"
-    s = device_string.lower()
-    phone_keywords = [
-        "phone",
-        "mobile",
-        "pixel",
-        "galaxy",
-        "iphone",
-        "android",
-        "oneplus",
-        "sm-g",
-        "redmi",
-        "xiaomi",
-        "mi",
-    ]
-    watch_keywords = [
-        "watch",
-        "wrist",
-        "fitbit",
-        "applewatch",
-        "apple watch",
-        "garmin",
-        "mi band",
-        "wear",
-        "galaxywatch",
-        "tizen",
-        "sm-r",
-        "pixel_watch",
-        "pixel-watch",
-    ]
-    for kw in watch_keywords:
-        if kw in s:
-            return "watch"
-    for kw in phone_keywords:
-        if kw in s:
-            return "phone"
-    if "sm-r" in s:
-        return "watch"
-    if "sm-g" in s:
-        return "phone"
-    return "phone"
-
-
-
-
-
-def create_window_from_buffer(buffer):
-    if len(buffer) < WINDOW_SIZE:
-        return None
-    recent = list(buffer)[-WINDOW_SIZE:]
-    window = np.array(
-        [
-            [s["ax"] for s in recent],
-            [s["ay"] for s in recent],
-            [s["az"] for s in recent],
-            [s["gx"] for s in recent],
-            [s["gy"] for s in recent],
-            [s["gz"] for s in recent],
-        ],
-        dtype=np.float32,
-    )
-    return window
 
 
 # Prediction functions with input-window debug
@@ -1120,6 +787,7 @@ def create_prob_bars(probs, title):
                 marker=dict(color=ACTIVITY_COLORS),
                 text=[f"{p:.1%}" for p in probs],
                 textposition="outside",
+                #width=0.4,
             )
         ]
     )
@@ -1647,7 +1315,7 @@ app.layout = html.Div(
                         dcc.Graph(id="phone_probs", style={"height": "200px"}),
                     ],
                     style={
-                        "width": "33%",
+                        "width": "28%",
                         "display": "inline-block",
                         "verticalAlign": "top",
                         "padding": "5px",
@@ -1674,7 +1342,7 @@ app.layout = html.Div(
                         dcc.Graph(id="watch_probs", style={"height": "200px"}),
                     ],
                     style={
-                        "width": "33%",
+                        "width": "28%",
                         "display": "inline-block",
                         "verticalAlign": "top",
                         "padding": "5px",
@@ -1701,7 +1369,7 @@ app.layout = html.Div(
                         dcc.Graph(id="fusion_probs", style={"height": "200px"}),
                     ],
                     style={
-                        "width": "33%",
+                        "width": "28%",
                         "display": "inline-block",
                         "verticalAlign": "top",
                         "padding": "5px",
@@ -2052,33 +1720,6 @@ def create_sensor_graph(time_data, sensor_data, names, title, yaxis_label, color
     return fig
 
 
-def create_prob_bars(probs, title):
-    probs = np.asarray(probs)
-    if probs.size != len(ACTIVITY_LABELS):
-        probs = np.zeros(len(ACTIVITY_LABELS))
-    fig = go.Figure(
-        data=[
-            go.Bar(
-                x=ACTIVITY_LABELS,
-                y=probs,
-                marker=dict(color=ACTIVITY_COLORS),
-                text=[f"{p:.1%}" for p in probs],
-                textposition="outside",
-            )
-        ]
-    )
-    fig.update_layout(
-        title=dict(text=title, font=dict(size=12)),
-        yaxis=dict(
-            title="Probability", range=[0, 1], showgrid=True, gridcolor="#ecf0f1"
-        ),
-        xaxis=dict(title="Activity"),
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-        margin=dict(l=40, r=20, t=40, b=40),
-    )
-    return fig
-
 
 def create_prediction_timeline():
     with buffer_lock:
@@ -2380,144 +2021,6 @@ def data():
             traceback.print_exc()
     return "ok", 200
 
-
-# -----------------------
-# Debug/status endpoints
-# -----------------------
-
-import os
-import platform
-import psutil
-
-
-@server.route("/debug", methods=["GET"])
-def debug_info():
-    """
-    Diagnostic debug endpoint: returns process + model identity (type & id) plus
-    model load paths. Helpful to detect multiple server processes or shadowed vars.
-    """
-    with buffer_lock:
-        phone_len = len(phone_buffer)
-        watch_len = len(watch_buffer)
-        last_phone_ts = (
-            phone_buffer[-1]["timestamp"].isoformat() if phone_len > 0 else None
-        )
-        last_watch_ts = (
-            watch_buffer[-1]["timestamp"].isoformat() if watch_len > 0 else None
-        )
-        last_pred_time = (
-            prediction_times[-1].isoformat() if len(prediction_times) > 0 else None
-        )
-        recent_dev_list = list(recent_device_strings)[-50:]
-        recent_ev = list(recent_events)[-50:]
-
-        # model type & id diagnostics
-        def model_info(m, path_var=None):
-            return {
-                "is_loaded": isinstance(m, torch.nn.Module),
-                "type": str(type(m)),
-                "id": id(m) if m is not None else None,
-                "repr": repr(m)[:400] if m is not None else None,
-                "path": str(path_var) if path_var is not None else None,
-            }
-
-        model_status = {
-            "phone": model_info(
-                phone_model,
-                getattr(phone_model_path, "resolve", lambda: phone_model_path)(),
-            ),
-            "watch": model_info(
-                watch_model,
-                getattr(watch_model_path, "resolve", lambda: watch_model_path)(),
-            ),
-            "fusion": model_info(
-                fusion_model,
-                getattr(fusion_model_path, "resolve", lambda: fusion_model_path)(),
-            ),
-        }
-
-        resp = {
-            "timestamp": datetime.now().isoformat(),
-            "pid": os.getpid(),
-            "python_executable": sys.executable,
-            "platform": platform.platform(),
-            "cwd": str(Path.cwd()),
-            "models": model_status,
-            "phone_buffer_len": phone_len,
-            "watch_buffer_len": watch_len,
-            "last_phone_sample_ts": last_phone_ts,
-            "last_watch_sample_ts": last_watch_ts,
-            "last_prediction_time": last_pred_time,
-            "sample_counts": sample_counts.copy(),
-            "both_ready_flag": both_ready_flag,
-            "last_both_ready_time": (
-                last_both_ready_time.isoformat()
-                if last_both_ready_time is not None
-                else None
-            ),
-            "recent_device_strings": recent_dev_list,
-            "recent_events_count": len(recent_ev),
-            "recent_events_sample": recent_ev[-10:],
-        }
-    # Also print to server console (so you can correlate console logs)
-    print(
-        "[DEBUG ENDPOINT CALLED] pid:",
-        resp["pid"],
-        "models:",
-        {k: (v["is_loaded"], v["type"]) for k, v in model_status.items()},
-    )
-    return jsonify(resp)
-
-
-@server.route("/status", methods=["GET"])
-def status_compact():
-    with buffer_lock:
-        return jsonify(
-            {
-                "phone_buffer_len": len(phone_buffer),
-                "watch_buffer_len": len(watch_buffer),
-                "frames": frame_count,
-                "both_ready": both_ready_flag,
-            }
-        )
-
-
-@server.route("/clear", methods=["POST", "GET"])
-def clear_buffers():
-    with buffer_lock:
-        phone_time_accel.clear()
-        phone_accel_x.clear()
-        phone_accel_y.clear()
-        phone_accel_z.clear()
-        phone_time_gyro.clear()
-        phone_gyro_x.clear()
-        phone_gyro_y.clear()
-        phone_gyro_z.clear()
-        watch_time_accel.clear()
-        watch_accel_x.clear()
-        watch_accel_y.clear()
-        watch_accel_z.clear()
-        watch_time_rot.clear()
-        watch_rot_x.clear()
-        watch_rot_y.clear()
-        watch_rot_z.clear()
-        phone_buffer.clear()
-        watch_buffer.clear()
-        accel_cache["phone"].clear()
-        accel_cache["watch"].clear()
-        gyro_cache["phone"].clear()
-        gyro_cache["watch"].clear()
-        phone_predictions.clear()
-        watch_predictions.clear()
-        fusion_predictions.clear()
-        prediction_times.clear()
-        phone_probs.clear()
-        watch_probs.clear()
-        fusion_probs.clear()
-        recent_events.clear()
-        recent_device_strings.clear()
-    print("[action] cleared buffers")
-    return jsonify({"status": "cleared"})
 
 
 # -----------------------
