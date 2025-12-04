@@ -370,6 +370,37 @@ def create_window_from_buffer(buffer):
     return window
 
 
+# -----------------------
+# Helper: safe conversion of windows -> torch.Tensor
+# -----------------------
+def window_to_tensor(window):
+    """
+    Convert a (6, WINDOW_SIZE) window (numpy array or nested list) into a torch.FloatTensor.
+    Avoids calling torch.from_numpy on systems where that raises "Numpy is not available".
+    Returns tensor shaped (1, 6, WINDOW_SIZE) WITHOUT moving to device (caller will move).
+    """
+    # First, try the fastest path (may raise if PyTorch / numpy combination unavailable)
+    try:
+        # If 'window' is a numpy array this will be fast and zero-copy on many systems
+        t = torch.from_numpy(window).float()
+        return t.unsqueeze(0)  # (1, 6, W)
+    except Exception:
+        # Fallback: convert to plain Python nested lists then to torch.tensor (safe)
+        try:
+            if hasattr(window, "tolist"):
+                pylist = window.tolist()
+            else:
+                # If it's an iterable of iterables (e.g., list of rows)
+                pylist = [list(row) for row in window]
+        except Exception:
+            # Last-resort: try elementwise conversion
+            pylist = [[float(v) for v in row] for row in window]
+        return torch.tensor(pylist, dtype=torch.float32).unsqueeze(0)
+
+
+# -----------------------
+# Keep _ensure_prob_vector from earlier defensive changes
+# -----------------------
 def _ensure_prob_vector(p):
     """Return a 1D numpy float vector of length len(ACTIVITY_LABELS)."""
     try:
@@ -377,13 +408,15 @@ def _ensure_prob_vector(p):
     except Exception:
         arr = np.zeros(len(ACTIVITY_LABELS), dtype=float)
     if arr.size != len(ACTIVITY_LABELS):
-        # If it's shorter/longer, fall back to zeros (or pad/truncate if you prefer)
         arr2 = np.zeros(len(ACTIVITY_LABELS), dtype=float)
         arr2[: min(arr.size, arr2.size)] = arr[: min(arr.size, arr2.size)]
         arr = arr2
     return arr
 
 
+# -----------------------
+# Rewritten prediction functions (use safe conversion helper)
+# -----------------------
 def predict_phone(window):
     if window is None:
         return "---", np.zeros(len(ACTIVITY_LABELS), dtype=float)
@@ -393,21 +426,18 @@ def predict_phone(window):
         return ACTIVITY_LABELS[int(np.argmax(probs))], probs
     try:
         with torch.no_grad():
-            x = (
-                torch.from_numpy(normalize_window(window))
-                .unsqueeze(0)
-                .float()
-                .to(device)
-            )
-            outputs = phone_model(x)
+            # normalize_window returns a numpy array or similar; keep using it
+            norm_win = normalize_window(window)
+            t = window_to_tensor(norm_win).to(device)  # shape (1, 6, W)
+            phone_model.eval()
+            outputs = phone_model(t)
             probs = torch.softmax(outputs, dim=1).cpu().numpy()[0]
             probs = _ensure_prob_vector(probs)
             return ACTIVITY_LABELS[int(np.argmax(probs))], probs
     except Exception as e:
         print("[ERROR] predict_phone:", e)
         traceback.print_exc()
-        probs = np.zeros(len(ACTIVITY_LABELS), dtype=float)
-        return "Error", probs
+        return "Error", np.zeros(len(ACTIVITY_LABELS), dtype=float)
 
 
 def predict_watch(window):
@@ -419,13 +449,10 @@ def predict_watch(window):
         return ACTIVITY_LABELS[int(np.argmax(probs))], probs
     try:
         with torch.no_grad():
-            x = (
-                torch.from_numpy(normalize_window(window))
-                .unsqueeze(0)
-                .float()
-                .to(device)
-            )
-            outputs = watch_model(x)
+            norm_win = normalize_window(window)
+            t = window_to_tensor(norm_win).to(device)
+            watch_model.eval()
+            outputs = watch_model(t)
             probs = torch.softmax(outputs, dim=1).cpu().numpy()[0]
             probs = _ensure_prob_vector(probs)
             return ACTIVITY_LABELS[int(np.argmax(probs))], probs
@@ -444,19 +471,12 @@ def predict_fusion(phone_window, watch_window):
         return ACTIVITY_LABELS[int(np.argmax(probs))], probs
     try:
         with torch.no_grad():
-            xp = (
-                torch.from_numpy(normalize_window(phone_window))
-                .unsqueeze(0)
-                .float()
-                .to(device)
-            )
-            xw = (
-                torch.from_numpy(normalize_window(watch_window))
-                .unsqueeze(0)
-                .float()
-                .to(device)
-            )
-            outputs = fusion_model(xp, xw)
+            p_norm = normalize_window(phone_window)
+            w_norm = normalize_window(watch_window)
+            tp = window_to_tensor(p_norm).to(device)
+            tw = window_to_tensor(w_norm).to(device)
+            fusion_model.eval()
+            outputs = fusion_model(tp, tw)
             probs = torch.softmax(outputs, dim=1).cpu().numpy()[0]
             probs = _ensure_prob_vector(probs)
             return ACTIVITY_LABELS[int(np.argmax(probs))], probs
